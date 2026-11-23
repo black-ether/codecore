@@ -79,18 +79,25 @@ to open.
 
 Use `--ask` to find matching outline lines at any depth. Results are
 ranked in a flat list with file names, line numbers, and enclosing
-blocks. Use `--top` to set the result limit (default 5) and
-`--format json` for JSON output.
+blocks. A result that opens a block shows its range (`[L:50-55]`);
+a single line shows just its line (`[L:50]`). Use `--top` to set
+the result limit (default 5) and `--format json` for JSON output
+(the JSON object carries an `end` field alongside `line`).
 
 ```sh
 go run . --ask "sort" --top 3 testdb/go
 ```
 
 BM25 scores each line using term frequency, term rarity across the
-outline, and line length. Matching uses exact, case-insensitive
-letter and digit tokens. Synonyms and partial identifiers can miss
-relevant lines. Search covers the text retained by the outline,
-including its line length cap.
+outline, and line length. A result's end line is the last line of
+the outline lines in its block (its deepest last descendant); a
+single line's end is its own line. For brace languages the closing
+brace line is not an outline node, so it is not included — the range
+covers the outline lines belonging to the block, not the closer.
+Matching uses exact, case-insensitive letter and digit tokens.
+Synonyms and partial identifiers can miss relevant lines. Search
+covers the text retained by the outline, including its line length
+cap.
 
 ## Design
 

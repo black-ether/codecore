@@ -1,7 +1,10 @@
 package main
 
 import (
+	"bytes"
+	"encoding/json"
 	"slices"
+	"strings"
 	"testing"
 )
 
@@ -68,6 +71,63 @@ func TestRetrieveRanking(t *testing.T) {
 	}
 	if got := retrieve(outlines, tokenize("missing"), 5); len(got) != 0 {
 		t.Errorf("unmatched query returned %+v", got)
+	}
+}
+
+func TestRetrieveRanges(t *testing.T) {
+	outlines := []*Outline{{File: "ranges.go", Nodes: []*Node{
+		{Line: 1, Text: "func outer()", Children: []*Node{
+			{Line: 2, Text: "inner one"},
+			{Line: 3, Text: "inner two", Children: []*Node{
+				{Line: 4, Text: "deep leaf"},
+			}},
+		}},
+		{Line: 5, Text: "standalone"},
+	}}}
+	// A block's end is its last descendant's line; a leaf's end is its own line.
+	got := retrieve(outlines, tokenize("outer"), 5)
+	if len(got) != 1 || got[0].Line != 1 || got[0].End != 4 {
+		t.Fatalf("outer = %+v, want line 1 end 4", got)
+	}
+	got = retrieve(outlines, tokenize("inner"), 5)
+	if len(got) != 2 {
+		t.Fatalf("inner = %+v, want 2 results", got)
+	}
+	if got[0].Line != 2 || got[0].End != 2 || got[1].Line != 3 || got[1].End != 4 {
+		t.Errorf("inner = %+v, want (2,2) then (3,4)", got)
+	}
+	got = retrieve(outlines, tokenize("standalone"), 5)
+	if len(got) != 1 || got[0].Line != 5 || got[0].End != 5 {
+		t.Fatalf("standalone = %+v, want line 5 end 5", got)
+	}
+}
+
+func TestFormatResultsRanges(t *testing.T) {
+	results := []retrievalResult{
+		{Rank: 1, File: "a.go", Line: 1, End: 4, Text: "func outer()", Score: 2.5},
+		{Rank: 2, File: "a.go", Line: 5, End: 5, Text: "standalone", Score: 1.0},
+	}
+	var buf bytes.Buffer
+	if err := formatResults(&buf, "text", "outer", results); err != nil {
+		t.Fatal(err)
+	}
+	got := buf.String()
+	if !strings.Contains(got, "a.go [L:1-4] func outer()") {
+		t.Errorf("text output = %q, want [L:1-4] for the block", got)
+	}
+	if !strings.Contains(got, "a.go [L:5] standalone") {
+		t.Errorf("text output = %q, want [L:5] for the single line", got)
+	}
+	buf.Reset()
+	if err := formatResults(&buf, "json", "outer", results); err != nil {
+		t.Fatal(err)
+	}
+	var decoded []retrievalResult
+	if err := json.Unmarshal(buf.Bytes(), &decoded); err != nil {
+		t.Fatal(err)
+	}
+	if len(decoded) != 2 || decoded[0].End != 4 || decoded[1].End != 5 {
+		t.Errorf("json output = %+v, want ends 4 and 5", decoded)
 	}
 }
 

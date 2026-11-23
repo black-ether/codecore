@@ -797,3 +797,46 @@ must contain the actual terms (`auth` will not find `login`),
 and a partial identifier will not match (`auth` will not find
 `authenticate`). Name extraction and end-line ranges are the
 obvious next steps if the minimal version proves useful.
+
+## 29. Retrieval ranges: --ask results carry an end line (2026-11-24)
+
+Jo: "Ranges first." The minimal `--ask` gave the header line
+only; now every result also carries the end line of its block,
+so the agent knows exactly which lines to read.
+
+The end line is computed from the tree, not from the file: it
+is the greatest line number among the node and all its
+descendants (the last outline line in the block). A leaf's end
+is its own line. No parser changes and no new Outline fields —
+`retrieve.go` gains a small `endLine(node)` helper, and each
+retrieval document stores its end when it is built. The range
+covers exactly the outline lines belonging to the block.
+
+Two consequences of that definition, both honest. For brace
+languages the closing brace line is not an outline node, so it
+is not included: a Go function's range ends at its last content
+line, not at the `}`. And for the last node in a file the end is
+still exact, because it comes from the tree, not from the file's
+total lines — no over-reading of trailing comments or blank
+lines. An exact source span (including the closer) would need
+the parsers to record block ends at extraction time; that is a
+bigger change, and the tree-derived range is the right first
+step.
+
+Output: text shows `[L:50-55]` for a block and `[L:50]` for a
+single line; JSON always carries an `end` field alongside
+`line`. The scoring is untouched — ranges change what a result
+points at, not how it ranks.
+
+This one Hana built directly (small, well-defined change; the
+Codex round-trips cost more than the code). Tests:
+`TestRetrieveRanges` (a block's end is its last descendant's
+line; a leaf's end is its own line) and
+`TestFormatResultsRanges` (text shows `[L:1-4]` for a block and
+`[L:5]` for a single line; JSON carries both ends). gofmt/vet/
+test/race all pass; fixtures and pp.ps1 unchanged
+(34/42/28/1494). `--ask "keymap"` on the real Lua files now
+shows `function keymap.set [L:66-112]` and `function keymap.del
+[L:139-166]` — the ranges are the functions' real spans.
+
+Still to come: name matching (§28's other half).

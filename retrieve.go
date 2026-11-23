@@ -14,6 +14,7 @@ type retrievalResult struct {
 	Rank    int      `json:"rank"`
 	File    string   `json:"file"`
 	Line    int      `json:"line"`
+	End     int      `json:"end"`
 	Text    string   `json:"text"`
 	Score   float64  `json:"score"`
 	Parents []string `json:"parents,omitempty"`
@@ -30,6 +31,22 @@ type retrievalDocument struct {
 	node    *Node
 	length  int
 	parents []string
+	end     int
+}
+
+// endLine returns the last line of the outline lines in node's block:
+// the greatest line number among node and all its descendants. A leaf's
+// end is its own line. For brace languages the closing brace line is not
+// an outline node, so it is not included — the range covers the outline
+// lines belonging to the block, not the closer.
+func endLine(node *Node) int {
+	end := node.Line
+	for _, child := range node.Children {
+		if e := endLine(child); e > end {
+			end = e
+		}
+	}
+	return end
 }
 
 type termOccurrence struct {
@@ -46,7 +63,7 @@ func retrieve(outlines []*Outline, terms []string, top int) []retrievalResult {
 		for _, node := range nodes {
 			tokens := tokenize(node.Text)
 			id := len(documents)
-			documents = append(documents, retrievalDocument{file, node, len(tokens), parents})
+			documents = append(documents, retrievalDocument{file, node, len(tokens), parents, endLine(node)})
 			totalLength += len(tokens)
 			frequencies := make(map[string]int)
 			for _, token := range tokens {
@@ -90,7 +107,7 @@ func retrieve(outlines []*Outline, terms []string, top int) []retrievalResult {
 	for i, doc := range documents {
 		if scores[i] > 0 {
 			results = append(results, retrievalResult{
-				File: doc.file, Line: doc.node.Line, Text: doc.node.Text,
+				File: doc.file, Line: doc.node.Line, End: doc.end, Text: doc.node.Text,
 				Score: scores[i], Parents: doc.parents,
 			})
 		}
@@ -129,8 +146,13 @@ func formatResults(w io.Writer, format, query string, results []retrievalResult)
 		if len(result.Parents) > 0 {
 			context = " · in " + strings.Join(result.Parents, " > ")
 		}
-		if _, err := fmt.Fprintf(w, "  %d. %s [L:%d] %s\n     score %.2f%s\n",
-			result.Rank, result.File, result.Line, result.Text, result.Score, context); err != nil {
+		// A block shows its range; a single line shows just its line.
+		ref := fmt.Sprintf("[L:%d]", result.Line)
+		if result.End > result.Line {
+			ref = fmt.Sprintf("[L:%d-%d]", result.Line, result.End)
+		}
+		if _, err := fmt.Fprintf(w, "  %d. %s %s %s\n     score %.2f%s\n",
+			result.Rank, result.File, ref, result.Text, result.Score, context); err != nil {
 			return err
 		}
 	}
