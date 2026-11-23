@@ -27,6 +27,70 @@ func tokenize(text string) []string {
 	})
 }
 
+// queryStopwords are the words a natural-language question adds that
+// carry no code meaning. They are stripped from the query only, never
+// from the code, so "where is auth handled" searches for "auth
+// handled". Action words (find, get, show, list) are kept — they can
+// be part of a function name.
+var queryStopwords = map[string]bool{
+	"where": true, "when": true, "why": true, "how": true, "what": true,
+	"which": true, "who": true, "whom": true, "whose": true,
+	"is": true, "are": true, "was": true, "were": true, "be": true,
+	"been": true, "being": true, "do": true, "does": true, "did": true,
+	"have": true, "has": true, "had": true, "can": true, "could": true,
+	"will": true, "would": true, "should": true, "may": true,
+	"might": true, "must": true, "shall": true,
+	"the": true, "a": true, "an": true, "and": true, "or": true,
+	"but": true, "of": true, "to": true, "in": true, "on": true,
+	"for": true, "with": true, "by": true, "at": true, "from": true,
+	"as": true,
+	"it": true, "its": true, "this": true, "that": true, "these": true,
+	"those": true, "i": true, "you": true, "he": true, "she": true,
+	"we": true, "they": true, "me": true, "him": true, "her": true,
+	"us": true, "them": true, "my": true, "your": true, "his": true,
+	"our": true, "their": true,
+	"not": true, "no": true, "please": true,
+}
+
+// filterQueryTerms drops query stopwords from tokenized query terms.
+func filterQueryTerms(terms []string) []string {
+	kept := terms[:0]
+	for _, term := range terms {
+		if !queryStopwords[term] {
+			kept = append(kept, term)
+		}
+	}
+	return kept
+}
+
+// prefixMatches returns, for a query term, the documents containing it
+// or any longer term it prefixes, mapping each document to the
+// strongest frequency among its matched terms. A query term of fewer
+// than 3 letters matches exactly only, so a one-letter query cannot
+// match everything starting with that letter. The document frequency
+// is the union over the matched terms, and a document is credited once
+// for its strongest match, not once per matched word.
+func prefixMatches(postings map[string][]termOccurrence, query string) map[int]float64 {
+	result := make(map[int]float64)
+	put := func(occurrences []termOccurrence) {
+		for _, m := range occurrences {
+			if tf := float64(m.frequency); tf > result[m.document] {
+				result[m.document] = tf
+			}
+		}
+	}
+	put(postings[query])
+	if len(query) < 3 {
+		return result
+	}
+	for term, occurrences := range postings {
+		if term != query && strings.HasPrefix(term, query) {
+			put(occurrences)
+		}
+	}
+	return result
+}
+
 type retrievalDocument struct {
 	file    string
 	node    *Node
@@ -222,17 +286,19 @@ func retrieve(outlines []*Outline, terms []string, top int) []retrievalResult {
 	avgdl := float64(totalLength) / n
 	scores := make([]float64, len(documents))
 	// Add scores in query order to keep floating-point sums deterministic.
+	// A query term matches the exact term and, when it is at least 3
+	// letters, any longer term it prefixes, so "auth" finds
+	// "authenticate".
 	for _, term := range terms {
-		matches := postings[term]
-		if len(matches) == 0 {
+		matched := prefixMatches(postings, term)
+		if len(matched) == 0 {
 			continue
 		}
-		df := float64(len(matches))
+		df := float64(len(matched))
 		idf := math.Log(1 + (n-df+0.5)/(df+0.5))
-		for _, match := range matches {
-			tf := float64(match.frequency)
-			dl := float64(documents[match.document].length)
-			scores[match.document] += idf * (tf * (k1 + 1)) / (tf + k1*(1-b+b*dl/avgdl))
+		for doc, tf := range matched {
+			dl := float64(documents[doc].length)
+			scores[doc] += idf * (tf * (k1 + 1)) / (tf + k1*(1-b+b*dl/avgdl))
 		}
 	}
 	for i, doc := range documents {

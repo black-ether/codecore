@@ -89,9 +89,9 @@ func run(args []string) int {
 			fmt.Fprintln(os.Stderr, "codecore: --top must be 1 or more")
 			return 2
 		}
-		terms = tokenize(*askFlag)
+		terms = filterQueryTerms(tokenize(*askFlag))
 		if len(terms) == 0 {
-			fmt.Fprintln(os.Stderr, "codecore: --ask query must contain a letter or digit")
+			fmt.Fprintln(os.Stderr, "codecore: --ask query must contain a searchable term")
 			return 2
 		}
 	}

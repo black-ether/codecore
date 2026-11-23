@@ -100,9 +100,24 @@ lines in its block (its deepest last descendant); a single line's
 end is its own line. For brace languages the closing brace line is
 not an outline node, so it is not included — the range covers the
 outline lines belonging to the block, not the closer. Matching uses
-exact, case-insensitive letter and digit tokens. Synonyms and
-partial identifiers can miss relevant lines. Search covers the text
-retained by the outline, including its line length cap.
+case-insensitive letter and digit tokens. A query term of 3 or more
+letters also matches any longer term it prefixes, so `auth` finds
+`authenticate`; shorter terms match exactly only. Synonyms can still
+miss relevant lines. Search covers the text retained by the outline,
+including its line length cap.
+
+### How to ask
+
+Query with code terms first — `authenticate`, not `where is auth
+handled`. Question words (where, is, how, the, …) are stripped
+from the query automatically, so a natural question still works,
+but code terms rank better because they match the names and the
+text directly. If a term finds nothing, try a shorter prefix
+(`auth` for `authenticate`) or a related word (`login`, `token`).
+If a query returns only uses, add the defining word (`def`,
+`func`, `class`) or the type it works on. Ask again with a
+narrower term rather than a longer sentence — extra words dilute
+the match.
 
 ## Design
 

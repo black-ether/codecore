@@ -139,6 +139,53 @@ func TestRetrieveNameBoost(t *testing.T) {
 	}
 }
 
+func TestFilterQueryTerms(t *testing.T) {
+	cases := []struct {
+		query string
+		want  []string
+	}{
+		{"where is auth handled", []string{"auth", "handled"}},
+		{"how do I sort a list", []string{"sort", "list"}},
+		{"authenticate user", []string{"authenticate", "user"}},
+		{"where is it", []string{}},
+	}
+	for _, c := range cases {
+		got := filterQueryTerms(tokenize(c.query))
+		if len(got) != len(c.want) {
+			t.Errorf("filterQueryTerms(%q) = %v, want %v", c.query, got, c.want)
+			continue
+		}
+		for i := range got {
+			if got[i] != c.want[i] {
+				t.Errorf("filterQueryTerms(%q) = %v, want %v", c.query, got, c.want)
+				break
+			}
+		}
+	}
+}
+
+func TestRetrievePrefixMatch(t *testing.T) {
+	outlines := []*Outline{{File: "auth.py", Nodes: []*Node{
+		{Line: 1, Text: "def authenticate_user():"},
+		{Line: 5, Text: "x = 1"},
+	}}}
+	// "auth" finds "authenticate" by prefix.
+	got := retrieve(outlines, tokenize("auth"), 5)
+	if len(got) != 1 || got[0].Line != 1 {
+		t.Errorf("retrieve(auth) = %+v, want the authenticate_user definition", got)
+	}
+	// "aut" (3 letters) also prefixes "authenticate".
+	got = retrieve(outlines, tokenize("aut"), 5)
+	if len(got) != 1 || got[0].Line != 1 {
+		t.Errorf("retrieve(aut) = %+v, want the authenticate_user definition", got)
+	}
+	// "au" (2 letters) is too short to prefix-match, and matches nothing exactly.
+	got = retrieve(outlines, tokenize("au"), 5)
+	if len(got) != 0 {
+		t.Errorf("retrieve(au) = %+v, want no results", got)
+	}
+}
+
 func TestRetrieveRanges(t *testing.T) {
 	outlines := []*Outline{{File: "ranges.go", Nodes: []*Node{
 		{Line: 1, Text: "func outer()", Children: []*Node{
