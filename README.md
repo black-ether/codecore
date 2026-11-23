@@ -11,7 +11,12 @@ go run . <dir>            # outline all supported files in a directory
 go run . --format json <file>
 ```
 
-Languages: Go (`.go`), Python (`.py`), PowerShell (`.ps1`, `.psm1`).
+Languages: Go, PowerShell, JavaScript, TypeScript, Rust, C, C++,
+C#, Java, Kotlin, Swift, Scala, Dart, Groovy, Zig, CSS, JSON, PHP
+(brace parser); Python, Ruby, Perl, Lua, R, Julia, Objective-C,
+Bash, SQL, MATLAB, HTML, XML, LaTeX, Clojure, Haskell, YAML (indent
+parser). One parser per language, chosen by the 33-language test
+database — see `ROUTING.md` for the table and the reasons.
 
 ## How it works
 
@@ -83,8 +88,21 @@ Three layers, kept separate:
   with no structure. C-style comments are skipped too: a `//` line,
   and a `/* */` block (only a comment at the start of a line is
   treated as one, so a `/*` inside a string or after code is left
-  alone). A `#` line is a comment — except `#[...]`, which is an
-  attribute (Rust), not a comment. A string on a line of its own
+  alone). Block comments nest (SQL), so the depth is counted, not
+  just a flag. A `#` line is a comment — except `#[...]`, which is an
+  attribute (Rust), not a comment, and a preprocessor directive
+  like `#include` / `#import` (C, Objective-C, C++), which is a
+  statement, not a comment. A `--` line is a comment too
+  (Lua, SQL). A `%` line is a comment too (MATLAB), and `%%` is a
+  section header — except when the `%` starts a Ruby string
+  literal (`%w[...]`, `%q{...}`), which is code. A bare `end` line
+  closes a block (Ruby, Lua), like
+  `}` — it is not a statement, so it is not shown. A closing tag
+  (`</...>`, HTML/XML) closes a block the same way, so it is not
+  shown either, and an HTML/XML `<!-- -->` comment is not a
+  statement (a multi-line one is tracked like a `/* */` block).
+  A `<?php` / `?>` tag line is boilerplate, not a statement, so it
+  is not shown either. A string on a line of its own
   inside a multi-line call is an argument, not a docstring, so it
   stays.
   Go and PowerShell fold by brackets: `{`, `(` and `[` open, their
@@ -106,14 +124,20 @@ CGo, no C compiler, no network on first run. `go mod tidy` works; see
 
 ## Adding a language
 
-1. Write a fold parser in a new `fold_<name>.go`: a function that
-   turns lines into `[]*Node`.
-2. Register it in `init()` via `RegisterExtractor` with its language
-   name and extensions.
-3. Write a `testdata/sample.<ext>` fixture and a `TestFold<Lang>`
-   test before trusting it.
-4. Nothing else changes: the CLI picks it up by extension, or by name
-   with `--lang <name>`.
+There are two parsers, not one per language: the indent parser
+(`parsePython` in `fold_python.go`) and the brace parser
+(`parseBraces` in `fold_braces.go`). Adding a language means
+choosing which one handles it best — test it against both on real
+code first (see `testdb/CHECKLIST.md` for the method), then
+register it in `init()` in `fold.go` with its language name,
+extensions, and `parser: "indent"` or `parser: "braces"`. The
+routing table in `ROUTING.md` is the record of those choices.
+If neither parser handles the language, write a new fold parser
+in a `fold_<name>.go` (a function that turns lines into
+`[]*Node`), register it the same way, and add a
+`testdata/sample.<ext>` fixture and a `TestFold<Lang>` test before
+trusting it. Nothing else changes: the CLI picks it up by
+extension, or by name with `--lang <name>`.
 
 ## Speed
 

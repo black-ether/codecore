@@ -27,12 +27,16 @@ func splitLines(src []byte) []string {
 	return lines
 }
 
-// foldExtractor is the one extractor for all three languages: it folds
-// blocks by indentation (Python) or by brackets (Go, PowerShell) and
-// returns the resulting tree of lines.
+// foldExtractor is the one extractor for every language: it folds
+// blocks by indentation or by brackets and returns the resulting
+// tree of lines. The parser field says which one — "indent" or
+// "braces" — and comes from the per-language routing table below,
+// built from the 33-language test database (testdb/CHECKLIST.md).
+// One parser per language, chosen by which handled it best.
 type foldExtractor struct {
 	language   string
 	extensions []string
+	parser     string // "indent" or "braces"
 }
 
 func (e foldExtractor) Language() string     { return e.language }
@@ -42,8 +46,8 @@ func (e foldExtractor) Extract(filename string, src []byte) (*Outline, error) {
 	lines := splitLines(src)
 	var nodes []*Node
 	var unbalanced bool
-	switch e.language {
-	case "python":
+	switch e.parser {
+	case "indent":
 		nodes = parsePython(lines)
 	default:
 		nodes, unbalanced = parseBraces(lines, e.language)
@@ -57,7 +61,47 @@ func (e foldExtractor) Extract(filename string, src []byte) (*Outline, error) {
 }
 
 func init() {
-	RegisterExtractor(foldExtractor{language: "go", extensions: []string{".go"}})
-	RegisterExtractor(foldExtractor{language: "python", extensions: []string{".py"}})
-	RegisterExtractor(foldExtractor{language: "powershell", extensions: []string{".ps1", ".psm1"}})
+	// Brace languages: the structure is in the brackets, so the
+	// brace parser folds them and does not depend on indentation.
+	RegisterExtractor(foldExtractor{language: "go", extensions: []string{".go"}, parser: "braces"})
+	RegisterExtractor(foldExtractor{language: "powershell", extensions: []string{".ps1", ".psm1"}, parser: "braces"})
+	RegisterExtractor(foldExtractor{language: "javascript", extensions: []string{".js", ".mjs", ".cjs"}, parser: "braces"})
+	RegisterExtractor(foldExtractor{language: "typescript", extensions: []string{".ts", ".tsx"}, parser: "braces"})
+	RegisterExtractor(foldExtractor{language: "rust", extensions: []string{".rs"}, parser: "braces"})
+	RegisterExtractor(foldExtractor{language: "c", extensions: []string{".c", ".h"}, parser: "braces"})
+	RegisterExtractor(foldExtractor{language: "cpp", extensions: []string{".cpp", ".cc", ".cxx", ".hpp", ".hh", ".hxx"}, parser: "braces"})
+	RegisterExtractor(foldExtractor{language: "csharp", extensions: []string{".cs"}, parser: "braces"})
+	RegisterExtractor(foldExtractor{language: "java", extensions: []string{".java"}, parser: "braces"})
+	RegisterExtractor(foldExtractor{language: "kotlin", extensions: []string{".kt", ".kts"}, parser: "braces"})
+	RegisterExtractor(foldExtractor{language: "swift", extensions: []string{".swift"}, parser: "braces"})
+	RegisterExtractor(foldExtractor{language: "scala", extensions: []string{".scala"}, parser: "braces"})
+	RegisterExtractor(foldExtractor{language: "dart", extensions: []string{".dart"}, parser: "braces"})
+	RegisterExtractor(foldExtractor{language: "groovy", extensions: []string{".groovy"}, parser: "braces"})
+	RegisterExtractor(foldExtractor{language: "zig", extensions: []string{".zig"}, parser: "braces"})
+	RegisterExtractor(foldExtractor{language: "css", extensions: []string{".css"}, parser: "braces"})
+	RegisterExtractor(foldExtractor{language: "json", extensions: []string{".json"}, parser: "braces"})
+	RegisterExtractor(foldExtractor{language: "php", extensions: []string{".php"}, parser: "braces"})
+
+	// Indent languages: the structure is in the indentation (and in
+	// the generic rules the indent parser carries — # and // and --
+	// and % comments, bare end, </...> closers, <!-- --> comments,
+	// <?php tags, #include/#import directives, nested /* */).
+	RegisterExtractor(foldExtractor{language: "python", extensions: []string{".py"}, parser: "indent"})
+	RegisterExtractor(foldExtractor{language: "ruby", extensions: []string{".rb"}, parser: "indent"})
+	RegisterExtractor(foldExtractor{language: "perl", extensions: []string{".pl", ".pm"}, parser: "indent"})
+	RegisterExtractor(foldExtractor{language: "lua", extensions: []string{".lua"}, parser: "indent"})
+	RegisterExtractor(foldExtractor{language: "r", extensions: []string{".r"}, parser: "indent"})
+	RegisterExtractor(foldExtractor{language: "julia", extensions: []string{".jl"}, parser: "indent"})
+	// .m is shared by Objective-C and MATLAB; both route to the
+	// indent parser, so the shared extension is not a conflict.
+	RegisterExtractor(foldExtractor{language: "objc", extensions: []string{".m", ".mm"}, parser: "indent"})
+	RegisterExtractor(foldExtractor{language: "matlab", extensions: []string{".m"}, parser: "indent"})
+	RegisterExtractor(foldExtractor{language: "bash", extensions: []string{".sh", ".bash"}, parser: "indent"})
+	RegisterExtractor(foldExtractor{language: "sql", extensions: []string{".sql"}, parser: "indent"})
+	RegisterExtractor(foldExtractor{language: "html", extensions: []string{".html", ".htm"}, parser: "indent"})
+	RegisterExtractor(foldExtractor{language: "xml", extensions: []string{".xml"}, parser: "indent"})
+	RegisterExtractor(foldExtractor{language: "latex", extensions: []string{".tex"}, parser: "indent"})
+	RegisterExtractor(foldExtractor{language: "clojure", extensions: []string{".clj", ".cljs", ".edn"}, parser: "indent"})
+	RegisterExtractor(foldExtractor{language: "haskell", extensions: []string{".hs"}, parser: "indent"})
+	RegisterExtractor(foldExtractor{language: "yaml", extensions: []string{".yml", ".yaml"}, parser: "indent"})
 }

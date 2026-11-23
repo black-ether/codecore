@@ -2,7 +2,7 @@ package main
 
 import "strings"
 
-// parseBraces folds a Go or PowerShell file by brackets: '{', '(' and
+// parseBraces folds a brace-language file by brackets: '{', '(' and
 // '[' open, their closers close. A line whose opener stays open past
 // the end of the line is a block header (an import group, a multi-line
 // call, a hashtable, a scriptblock); a line whose brackets all balance
@@ -24,6 +24,10 @@ func parseBraces(lines []string, lang string) ([]*Node, bool) {
 	// flattening to the enclosing level.
 	var lastNode *Node
 	for lineno, line := range lines {
+		// A PHP tag (<?php / ?>) is boilerplate, not a statement.
+		if stripped := strings.TrimSpace(line); stripped == "<?php" || stripped == "?>" {
+			continue
+		}
 		events, hasCode := scanBraces(line, lang, st)
 		if !hasCode && len(events) == 0 {
 			continue
@@ -222,7 +226,9 @@ func scanBraces(line, lang string, st *braceState) ([]byte, bool) {
 		}
 		if i+1 < n {
 			two := line[i : i+2]
-			if lang == "go" && two == "/*" {
+			// C-style block comments (/* */) are used by every brace
+			// language except PowerShell (which uses <# #>).
+			if lang != "powershell" && two == "/*" {
 				st.blockComment = true
 				i += 2
 				continue
@@ -232,7 +238,9 @@ func scanBraces(line, lang string, st *braceState) ([]byte, bool) {
 				i += 2
 				continue
 			}
-			if lang == "go" && two == "//" {
+			// C-style line comments (//) are used by every brace
+			// language except PowerShell (which uses #).
+			if lang != "powershell" && two == "//" {
 				break
 			}
 			if lang == "powershell" && (two == "@\"" || two == "@'") {
@@ -246,7 +254,9 @@ func scanBraces(line, lang string, st *braceState) ([]byte, bool) {
 		if c == '"' {
 			i++
 			for i < n && line[i] != '"' {
-				if (lang == "go" && line[i] == '\\') || (lang == "powershell" && line[i] == '`') {
+				// Backslash escapes strings in every brace language
+				// except PowerShell (which uses ` instead).
+				if (lang != "powershell" && line[i] == '\\') || (lang == "powershell" && line[i] == '`') {
 					i += 2
 				} else {
 					i++
@@ -271,7 +281,7 @@ func scanBraces(line, lang string, st *braceState) ([]byte, bool) {
 					i++
 					break
 				}
-				if lang == "go" && line[i] == '\\' {
+				if lang != "powershell" && line[i] == '\\' {
 					i += 2
 				} else {
 					i++

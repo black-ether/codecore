@@ -491,3 +491,191 @@ TestFoldPythonAttributes. Re-running bubble_sort.rs through the
 indent parser now matches the brace parser exactly (mod tests
 shows 21 hidden, up from 18). The Python fixture and pp.ps1 are
 unchanged.
+
+## 18. Real scripts, and the split header in the indent parser (2026-11-23)
+
+Jo asked for real scripts from git instead of the textbook
+examples. Three were pulled: golang/go's strings/builder.go,
+psf/requests' api.py, and PowerShell/PowerShell's
+tools/Sign-Package.ps1. The Go and PowerShell files are clean.
+The Python file shows a new issue: the split-header problem
+exists in the indent parser too. Every multi-line `def` with a
+return type splits into two nodes — `def request(` (L:24) and
+`) -> Response:` (L:26) — and the body nests under the closer
+line. The brace-parser fix (section 16) does not cover the
+indent parser, which works by indentation alone and has no
+bracket tracking to merge the closer line into its header.
+
+## 19. PHP tags are not useful information (2026-11-23)
+
+Jo, on the PHP test-database run: "Clean up the <?php it's not
+useful information." The `<?php` opener line (and its counterpart
+`?>`) is boilerplate — it carries no structure and tells you
+nothing about the outline. Both parsers now skip a line whose
+stripped text is exactly `<?php` or `?>`: the indent parser in
+its first pass, the brace parser at the top of its event loop.
+Regression test: TestFoldPHPTags (both parsers, via
+ExtractorByLanguage). Re-running the three PHP files, the output
+now opens with `declare(strict_types=1);` instead of `<?php`.
+The Perl run the same evening confirmed the same shape for the
+shebang: the indent parser already hides `#!/usr/bin/perl`
+(it starts with `#`), while the brace parser forced with
+`--lang go` shows it, because Go has no `#` comment rule.
+
+## 20. Lua comments and "end" are not shown (2026-11-23)
+
+From the Lua test-database run and the real-code check (Neovim's
+runtime/lua/vim/*.lua): the indent parser showed every `--` line
+comment as a node — it skipped `#`, `//` and `/* */`, but not
+Lua's `--` — and it showed every `end` keyword as a stray leaf,
+the same as Ruby. In real Lua code the missing `--` rule
+dominated: 48–59% of all nodes in the three Neovim files were
+`---` LuaDoc comment lines, plus the `end` nodes, so 56–67% of
+the outline was noise; the first real function in keymap.lua was
+buried under 60+ doc-comment lines. The textbook examples hid
+this because they have almost no comments.
+
+Jo: "Let's patch it for now. With short comment next to it to
+note down what language it is for." Two rules in the indent
+parser's first pass, each with a short language comment beside
+it: a line starting with `--` is skipped (Lua, and SQL, which
+uses `--` too); a bare `end` line is skipped (Ruby, Lua — it
+closes a block, like `}`). Regression test:
+TestFoldPythonLuaCommentsAndEnd. Re-running: keymap.lua 155 → 50
+nodes (the one remaining `---` match is a real statement,
+`opts.remap = nil ---@type boolean?`, with a trailing
+annotation, not a comment node), log.lua 255 → 106, pos.lua
+320 → 107, all with zero `end` nodes. The Ruby files improve
+too (the `end` lines are gone). Fixtures and pp.ps1 unchanged.
+Known gaps, left for now: a `--[[ ]]` long comment's content
+lines would still show (no standalone `--[[ ]]` block in the
+test files), and an `end` with a trailing comment is not skipped
+(none in the test files).
+
+## 21. Preprocessor directives are statements, not comments (2026-11-23)
+
+From the Objective-C test-database run: the indent parser hid
+the `#import` lines in main.m and sorts.m, and it had hidden the
+`#include` lines in the C and C++ runs too. In C-family
+languages `#` starts a preprocessor directive (`#include`,
+`#import`, `#define`, ...), not a comment, so those lines are
+statements and should show — the same `#` leak as the Rust
+attributes, a different form. Jo confirmed the plan: route each
+language to the parser that handles it best (the test database
+is the evidence for that routing table), and add the needed
+exceptions to that parser as generic rules. For Objective-C the
+indent parser is better (it merges multi-line signatures and
+nests `case` bodies correctly; the brace parser splits headers
+and shows `case` bodies as siblings), so the fix goes in the
+indent parser.
+
+Fix: `fold_python.go` gains `isPreprocessorLine`, which reports
+whether a `#` line is a directive (the word after `#` is one of
+include, import, define, undef, ifdef, ifndef, if, else, elif,
+endif, pragma, error, warning, line); the `#` skip now spares
+those lines, with a short language comment beside it.
+Regression test: TestFoldPythonPreprocessor. Re-running: C
+bubble_sort shows `#include <assert.h>` (L:6) through
+`#include <time.h>` (L:10); Objective-C main.m shows all three
+`#import` lines and sorts.m shows `#import "sorts.h"`. This
+also fixes the C++ `#include` gap. Fixtures, pp.ps1, Python,
+Ruby and Lua spot-checks unchanged.
+
+## 22. Nested /* */ block comments are hidden (2026-11-23)
+
+From the SQL test-database run: SQL allows block comments to
+nest, and neither parser tracked the depth — both treated the
+first `*/` as closing the comment. In postgres's comments.sql
+(a stress test that nests three levels), the indent parser
+showed L:36 (`Hoo boy. Still two deep...`), L:37 (`*/`),
+L:38 (`Now just one deep...`) and L:39 (`*/`) as nodes, even
+though they are still inside the comment, and L:25 (`*/`) showed
+because the embedded `/* */` on L:24 closed the outer comment
+early in the parser's view. Jo: "Fix it and move on."
+
+Fix: the indent parser's `inBlockComment` boolean became a
+`blockDepth` counter. Inside a comment, each line's `/*` openers
+and `*/` closers are counted and the depth is adjusted; a line
+that opens more than it closes raises the depth. The opener rule
+is unchanged (only a `/*` at the start of the line opens one,
+and a line that opens and closes is skipped unless code follows
+the closer). Regression test:
+TestFoldPythonNestedBlockComments. Re-running comments.sql: the
+nested lines are gone — the output is just the SELECT
+statements. Fixtures, pp.ps1, and the JS/TS C-style-comment
+spot-checks unchanged. The brace parser's `/* */` handling stays
+non-nested, which is correct for its languages (C, Go, JS and
+the rest do not allow nested block comments).
+
+## 23. % comments are hidden, Ruby % literals are kept (2026-11-23)
+
+From the MATLAB test-database run: MATLAB uses % for line
+comments and %% for section headers, and the indent parser had
+no % rule, so the comment lines showed as nodes in all three
+files. Jo: "Okay handling that with care." The care: Ruby uses
+% to start string literals (%w[...], %q{...}, %r/.../), so a
+blanket % skip would hide Ruby code. The rule added to
+fold_python.go: a line starting with % is skipped UNLESS it
+matches a Ruby literal — a % followed by one of the literal
+letters w W q Q r s x i I and then a delimiter (a character that
+is not a letter, digit or underscore). A MATLAB comment that
+happens to start with a literal letter (%write) is still a
+comment, because the character after the letter is a letter, not
+a delimiter. Helper: isRubyPercentLiteral. Regression test:
+TestFoldPythonPercentComments. Re-running the three MATLAB
+files: all clean — the % and %% lines are gone, the structure
+(functions, if/else/elseif, for, while) is intact, and trailing
+comments after code still show (they are part of a code line).
+Fixtures, pp.ps1, the Ruby spot-check and real Lua (keymap.lua
+still 50 nodes) unchanged.
+
+## 24. HTML/XML closing tags and comments are hidden (2026-11-23)
+
+From the HTML and XML test-database runs: the indent parser
+nested tag-based files correctly by indentation, but closing
+tags (</head>, </body>, </html>, </manifest>, ...) and <!-- -->
+comments showed as nodes. Jo: add a small fix to the indent
+parser if it does not mess anything else up, and ask Gemini to
+build a separate tag parser in parallel (to judge reliability).
+
+Fix (indent parser, fold_python.go): a line starting with </ is
+skipped when nothing but whitespace follows the ">" (a closing
+tag is a closer, like "}" or "end"); a <!-- --> comment is
+skipped — a single-line one, or a multi-line one tracked with a
+flag (HTML comments do not nest), unless code follows the
+closer (e.g. <!-- ... --><style ... /> stays, as a code line).
+Regression test: TestFoldPythonHTMLTagsAndComments. Re-running
+all six HTML/XML files: clean — the closers and the comments
+(including the 15-line license header and the multi-line CRA
+comment blocks) are gone, and the tag structure is intact.
+Fixtures, pp.ps1, and the Ruby/Lua/SQL/JS/TS/C spot-checks
+unchanged. The -- rule still hides the --> closer, and the /*
+*/ nesting still works. HTML and XML are the only tag-based
+languages in the 29 — CSS uses braces and LaTeX uses
+commands/environments, so no other language needs these rules.
+
+## 25. Routing table: one parser per language (2026-11-23)
+
+All 33 languages tested (testdb/CHECKLIST.md). The routing table
+is now registered in fold.go: each language maps to one parser
+("indent" or "braces") with its extensions, chosen by which parser
+handled it best in the tests. ROUTING.md is the full write-up
+(table, reasons, issues fixed vs left, known limits, what was not
+covered).
+
+Two changes were needed to make the table work. First, the brace
+parser's C-style comment rules (/* */, //) and backslash escapes
+were Go-only; they now apply to every brace language except
+PowerShell (which uses <# #>, #, and ` escapes). The tests ran
+with --lang go, which had those rules, so without this change
+JavaScript, C, Java, and the other brace languages would have
+shown their comments as nodes under their own language name.
+Second, the foldExtractor gained a parser field so Extract
+dispatches on the routed parser instead of on the language name.
+
+Verification: the default run (no --lang) was compared against
+the forced run of the routed parser for every test file — 93
+files pass. The 3 Bash test files have no .sh extension, so they
+cannot route by extension (they still work with --lang python).
+Fixtures and pp.ps1 unchanged (34/42/28/1494); real Lua keymap.lua
+still 50 nodes. gofmt/vet/test/race all pass.

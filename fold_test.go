@@ -487,6 +487,131 @@ function f() {
 	}
 }
 
+// A % line is a MATLAB comment (and %% a section header) —
+// except when it is a Ruby % literal like %w[...] or %q{...}.
+// A MATLAB comment that happens to start with a literal letter
+// (%write) is still a comment, because the character after the
+// letter is a letter, not a delimiter.
+func TestFoldPythonPercentComments(t *testing.T) {
+	src := `%% Section header
+% A MATLAB comment
+%write the result
+function y = f(x)
+    y = x + 1;
+end
+%w[foo bar].each { |w| puts w }
+%q{hello}
+`
+	ext, ok := ExtractorByLanguage("python")
+	if !ok {
+		t.Fatal("no python extractor")
+	}
+	o, err := ext.Extract("percent.m", []byte(src))
+	if err != nil {
+		t.Fatalf("extract percent.m: %v", err)
+	}
+	for _, line := range []int{1, 2, 3} {
+		if n := findNode(o, line); n != nil {
+			t.Errorf("MATLAB comment L:%d should not be a node, got %v", line, n)
+		}
+	}
+	if n := findNode(o, 4); n == nil {
+		t.Error("function header L:4 should be a node")
+	}
+	if n := findNode(o, 7); n == nil {
+		t.Error("Ruby percent-w literal L:7 should be a node")
+	}
+	if n := findNode(o, 8); n == nil {
+		t.Error("Ruby percent-q literal L:8 should be a node")
+	}
+	total, blocks, _ := countNodes(o)
+	if total != 4 || blocks != 1 {
+		t.Errorf("percent comments: total=%d blocks=%d, want 4/1", total, blocks)
+	}
+}
+
+// Block comments nest (SQL): a /* inside a block comment opens
+// another level, and only the matching */ closes it. Lines inside
+// any level are hidden, including the closers.
+func TestFoldPythonNestedBlockComments(t *testing.T) {
+	src := `SELECT 1;
+/* outer
+/* middle
+/* inner
+*/
+still middle
+*/
+still outer
+*/
+SELECT 2;
+`
+	ext, ok := ExtractorByLanguage("python")
+	if !ok {
+		t.Fatal("no python extractor")
+	}
+	o, err := ext.Extract("nested.sql", []byte(src))
+	if err != nil {
+		t.Fatalf("extract nested.sql: %v", err)
+	}
+	for _, line := range []int{2, 3, 4, 5, 6, 7, 8, 9} {
+		if n := findNode(o, line); n != nil {
+			t.Errorf("comment L:%d should not be a node, got %v", line, n)
+		}
+	}
+	if n := findNode(o, 1); n == nil {
+		t.Error("statement L:1 should be a node")
+	}
+	if n := findNode(o, 10); n == nil {
+		t.Error("statement L:10 should be a node")
+	}
+	total, blocks, _ := countNodes(o)
+	if total != 2 || blocks != 0 {
+		t.Errorf("nested comments: total=%d blocks=%d, want 2/0", total, blocks)
+	}
+}
+
+// A closing tag (</...>) is a closer, not a statement, and an
+// HTML/XML <!-- --> comment is not a statement either. A comment
+// with code after it is a code line and stays.
+func TestFoldPythonHTMLTagsAndComments(t *testing.T) {
+	src := `<html>
+  <head>
+    <!-- a single-line comment -->
+    <title>Hi</title>
+  </head>
+  <body>
+    <!--
+    a multi-line comment
+    -->
+    <p>Hello</p>
+  </body>
+</html>
+<!-- a comment --><style name="x" />
+`
+	ext, ok := ExtractorByLanguage("python")
+	if !ok {
+		t.Fatal("no python extractor")
+	}
+	o, err := ext.Extract("tags.html", []byte(src))
+	if err != nil {
+		t.Fatalf("extract tags.html: %v", err)
+	}
+	for _, line := range []int{3, 5, 7, 8, 9, 11, 12} {
+		if n := findNode(o, line); n != nil {
+			t.Errorf("comment or closing tag L:%d should not be a node, got %v", line, n)
+		}
+	}
+	for _, line := range []int{1, 2, 4, 6, 10, 13} {
+		if n := findNode(o, line); n == nil {
+			t.Errorf("tag L:%d should be a node", line)
+		}
+	}
+	total, blocks, _ := countNodes(o)
+	if total != 6 || blocks != 3 {
+		t.Errorf("HTML tags: total=%d blocks=%d, want 6/3", total, blocks)
+	}
+}
+
 // A #[...] attribute line is not a comment: in Rust, # starts an
 // attribute, not a comment. A plain # line is still skipped.
 func TestFoldPythonAttributes(t *testing.T) {
@@ -511,6 +636,121 @@ mod tests {
 	total, blocks, _ := countNodes(o)
 	if total != 5 || blocks != 2 {
 		t.Errorf("attributes: total=%d blocks=%d, want 5/2", total, blocks)
+	}
+}
+
+// A PHP tag (<?php / ?>) is boilerplate, not a statement — it is
+// skipped in both parsers, so a PHP file opens with its first real
+// line instead of the tag.
+func TestFoldPHPTags(t *testing.T) {
+	src := `<?php
+declare(strict_types=1);
+
+function greet(string $name): string {
+    return "Hello, " . $name;
+}
+?>
+`
+	for _, lang := range []string{"go", "python"} {
+		ext, ok := ExtractorByLanguage(lang)
+		if !ok {
+			t.Fatalf("no %s extractor", lang)
+		}
+		o, err := ext.Extract("tags.php", []byte(src))
+		if err != nil {
+			t.Fatalf("extract tags.php (%s): %v", lang, err)
+		}
+		if n := findNode(o, 1); n != nil {
+			t.Errorf("<?php L:1 should not be a node (%s), got %v", lang, n)
+		}
+		if n := findNode(o, 7); n != nil {
+			t.Errorf("?> L:7 should not be a node (%s), got %v", lang, n)
+		}
+		if n := findNode(o, 4); n == nil {
+			t.Errorf("function header L:4 should be a node (%s)", lang)
+		}
+		total, blocks, _ := countNodes(o)
+		if total != 3 || blocks != 1 {
+			t.Errorf("php tags (%s): total=%d blocks=%d, want 3/1", lang, total, blocks)
+		}
+	}
+}
+
+// A preprocessor directive (#include, #import, #define, ...) is
+// a statement, not a comment — it stays. (C, Objective-C, C++.)
+// A plain # line is still a comment and is hidden.
+func TestFoldPythonPreprocessor(t *testing.T) {
+	src := `#include <stdio.h>
+#import "foo.h"
+#define MAX 10
+#ifdef DEBUG
+#endif
+# a comment
+int main() {
+    return 0;
+}
+`
+	ext, ok := ExtractorByLanguage("python")
+	if !ok {
+		t.Fatal("no python extractor")
+	}
+	o, err := ext.Extract("test.c", []byte(src))
+	if err != nil {
+		t.Fatalf("extract test.c: %v", err)
+	}
+	for _, line := range []int{1, 2, 3, 4, 5} {
+		if n := findNode(o, line); n == nil {
+			t.Errorf("preprocessor line L:%d should be a node", line)
+		}
+	}
+	if n := findNode(o, 6); n != nil {
+		t.Errorf("comment line L:6 should not be a node, got %v", n)
+	}
+	if n := findNode(o, 7); n == nil {
+		t.Error("function header L:7 should be a node")
+	}
+	total, blocks, _ := countNodes(o)
+	if total != 7 || blocks != 1 {
+		t.Errorf("preprocessor: total=%d blocks=%d, want 7/1", total, blocks)
+	}
+}
+
+// Lua line comments (--) and block closers (end) are not shown:
+// -- is a comment, and a bare "end" is a pure structural closer
+// like "}". The nesting still works because the parser pops the
+// stack when the next line is less indented.
+func TestFoldPythonLuaCommentsAndEnd(t *testing.T) {
+	src := `-- a header comment
+local function greet(name)
+    -- a comment inside
+    if name then
+        print(name)
+    end
+    return name
+end
+`
+	ext, ok := ExtractorByLanguage("python")
+	if !ok {
+		t.Fatal("no python extractor")
+	}
+	o, err := ext.Extract("test.lua", []byte(src))
+	if err != nil {
+		t.Fatalf("extract test.lua: %v", err)
+	}
+	for _, line := range []int{1, 3, 6, 8} {
+		if n := findNode(o, line); n != nil {
+			t.Errorf("line L:%d should not be a node, got %v", line, n)
+		}
+	}
+	if n := findNode(o, 2); n == nil {
+		t.Error("function header L:2 should be a node")
+	}
+	if p := findParent(o, 5); p == nil || p.Line != 4 {
+		t.Errorf("print's parent = %v, want the if line L:4", p)
+	}
+	total, blocks, _ := countNodes(o)
+	if total != 4 || blocks != 2 {
+		t.Errorf("lua comments/end: total=%d blocks=%d, want 4/2", total, blocks)
 	}
 }
 

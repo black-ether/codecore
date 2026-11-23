@@ -21,7 +21,8 @@ func parsePython(lines []string) []*Node {
 	}
 	var code []codeLine
 	inTriple := ""
-	inBlockComment := false
+	blockDepth := 0
+	inHTMLComment := false
 	for i, line := range lines {
 		if inTriple != "" {
 			if strings.Contains(line, inTriple) {
@@ -29,22 +30,60 @@ func parsePython(lines []string) []*Node {
 			}
 			continue
 		}
-		if inBlockComment {
-			if strings.Contains(line, "*/") {
-				inBlockComment = false
+		if blockDepth > 0 {
+			blockDepth += strings.Count(line, "/*") - strings.Count(line, "*/")
+			if blockDepth < 0 {
+				blockDepth = 0
+			}
+			continue
+		}
+		if inHTMLComment {
+			if strings.Contains(line, "-->") {
+				inHTMLComment = false
 			}
 			continue
 		}
 		stripped := strings.TrimSpace(line)
+		// A PHP tag (<?php / ?>) is boilerplate, not a statement.
+		if stripped == "<?php" || stripped == "?>" {
+			continue
+		}
 		// A # line is a comment — except #[...], which is an
-		// attribute (Rust), not a comment. Only a # at the start
-		// of the line counts either way.
-		if stripped == "" || (strings.HasPrefix(stripped, "#") && !strings.HasPrefix(stripped, "#[")) {
+		// attribute (Rust), and a preprocessor directive like
+		// #include / #import (C, Objective-C, C++), which is a
+		// statement, not a comment. Only a # at the start of
+		// the line counts either way.
+		if stripped == "" || (strings.HasPrefix(stripped, "#") && !strings.HasPrefix(stripped, "#[") && !isPreprocessorLine(stripped)) {
 			continue
 		}
 		// A // line comment is not a statement.
 		if strings.HasPrefix(stripped, "//") {
 			continue
+		}
+		// Lua (and SQL): -- starts a line comment.
+		if strings.HasPrefix(stripped, "--") {
+			continue
+		}
+		// MATLAB: % starts a line comment, and %% starts a
+		// section header. Ruby uses % for string literals
+		// (%w[...], %q{...}), so a % followed by a literal
+		// letter and a delimiter is code, not a comment.
+		if strings.HasPrefix(stripped, "%") && !isRubyPercentLiteral(stripped) {
+			continue
+		}
+		// Ruby, Lua: "end" closes a block, like "}" — not a statement.
+		if stripped == "end" {
+			continue
+		}
+		// HTML, XML: a closing tag (</...>) closes a block,
+		// like "}" or "end" — not a statement. It is skipped
+		// only when nothing but whitespace follows the ">".
+		if strings.HasPrefix(stripped, "</") {
+			if idx := strings.Index(stripped, ">"); idx >= 0 {
+				if strings.TrimSpace(stripped[idx+1:]) == "" {
+					continue
+				}
+			}
 		}
 		// A line that is only closers (and commas/semicolons) is part
 		// of a multi-line construct above it, not a statement of its
@@ -53,20 +92,40 @@ func parsePython(lines []string) []*Node {
 		if isPunctuationOnly(stripped) {
 			continue
 		}
-		// A /* */ block comment is not a statement either. A line
-		// that only opens one starts a block comment; a line that
-		// opens and closes one is skipped unless code follows the
+		// An HTML/XML <!-- --> comment is not a statement.
+		// HTML comments do not nest, so a flag (not a depth
+		// counter) tracks a multi-line one. A line that opens
+		// and closes one is skipped unless code follows the
 		// closer. Only a comment at the start of the line is
-		// treated this way — a /* inside a string or after code
-		// is left alone.
+		// treated this way.
+		if strings.HasPrefix(stripped, "<!--") {
+			if idx := strings.LastIndex(stripped, "-->"); idx >= 0 {
+				if strings.TrimSpace(stripped[idx+3:]) == "" {
+					continue
+				}
+			} else {
+				inHTMLComment = true
+				continue
+			}
+		}
+		// A /* */ block comment is not a statement either. Block
+		// comments nest (SQL), so the depth is counted, not just
+		// a flag. A line that only opens one starts a block
+		// comment; a line that opens and closes one is skipped
+		// unless code follows the closer. Only a comment at the
+		// start of the line is treated this way — a /* inside a
+		// string or after code is left alone.
 		if strings.HasPrefix(stripped, "/*") {
+			opens := strings.Count(stripped, "/*")
+			closes := strings.Count(stripped, "*/")
+			if opens > closes {
+				blockDepth = opens - closes
+				continue
+			}
 			if idx := strings.LastIndex(stripped, "*/"); idx >= 0 {
 				if strings.TrimSpace(stripped[idx+2:]) == "" {
 					continue
 				}
-			} else {
-				inBlockComment = true
-				continue
 			}
 		}
 		opened := ""
@@ -139,6 +198,42 @@ func parsePython(lines []string) []*Node {
 		}
 	}
 	return root
+}
+
+// isPreprocessorLine reports whether a line is a C-style
+// preprocessor directive (#include, #import, #define, ...).
+// Those are statements, not comments. (C, Objective-C, C++.)
+func isPreprocessorLine(stripped string) bool {
+	if !strings.HasPrefix(stripped, "#") {
+		return false
+	}
+	rest := strings.TrimSpace(stripped[1:])
+	for _, kw := range []string{"include", "import", "define", "undef", "ifdef", "ifndef", "if", "else", "elif", "endif", "pragma", "error", "warning", "line"} {
+		if rest == kw || strings.HasPrefix(rest, kw+" ") || strings.HasPrefix(rest, kw+"\t") {
+			return true
+		}
+	}
+	return false
+}
+
+// isRubyPercentLiteral reports whether a line starts with a Ruby
+// % literal (like %w[...], %q{...}, %r/.../): a % followed by one
+// of the literal letters w W q Q r s x i I and then a delimiter
+// (a character that is not a letter, digit or underscore). A %
+// followed by anything else is a MATLAB comment, not a Ruby
+// literal — including %write, where the letter after w is a
+// letter, not a delimiter.
+func isRubyPercentLiteral(stripped string) bool {
+	if len(stripped) < 3 || stripped[0] != '%' {
+		return false
+	}
+	switch stripped[1] {
+	case 'w', 'W', 'q', 'Q', 'r', 's', 'x', 'i', 'I':
+	default:
+		return false
+	}
+	c := stripped[2]
+	return !((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9') || c == '_')
 }
 
 // isDocstringLine reports whether a line is a standalone
