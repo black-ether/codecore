@@ -75,6 +75,23 @@ shown. A block that opens and closes on one line (`if ($x) { $y = 1 }`,
 `$sb = { param($x) $x * 2 }`) is a leaf — there is nothing inside it
 to open.
 
+## Ask
+
+Use `--ask` to find matching outline lines at any depth. Results are
+ranked in a flat list with file names, line numbers, and enclosing
+blocks. Use `--top` to set the result limit (default 5) and
+`--format json` for JSON output.
+
+```sh
+go run . --ask "sort" --top 3 testdb/go
+```
+
+BM25 scores each line using term frequency, term rarity across the
+outline, and line length. Matching uses exact, case-insensitive
+letter and digit tokens. Synonyms and partial identifiers can miss
+relevant lines. Search covers the text retained by the outline,
+including its line length cap.
+
 ## Design
 
 Three layers, kept separate:

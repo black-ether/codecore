@@ -22,6 +22,8 @@ Flags:
   --depth N            show the first N levels (default: per language —
                        0 for most, 2 for HTML/XML, whose top level is a
                        single wrapper tag)
+  --ask "query"        rank matching outline lines at any depth
+  --top N              maximum results for --ask (default 5)
   -h, --help           show this help
 
 With no arguments, this help is shown. Flags come before paths.
@@ -65,6 +67,8 @@ func run(args []string) int {
 	fs.SetOutput(io.Discard)
 	formatFlag := fs.String("format", "text", "output format: text|json")
 	langFlag := fs.String("lang", "auto", "language name or auto")
+	askFlag := fs.String("ask", "", "rank matching outline lines")
+	topFlag := fs.Int("top", 5, "maximum results for --ask")
 	// -1 means "not specified": the language's default depth is used
 	// (0 for most languages, 2 for HTML/XML). An explicit --depth 0
 	// still shows only the top level.
@@ -79,11 +83,23 @@ func run(args []string) int {
 		return 2
 	}
 	paths := fs.Args()
+	var terms []string
+	if *askFlag != "" {
+		if *topFlag < 1 {
+			fmt.Fprintln(os.Stderr, "codecore: --top must be 1 or more")
+			return 2
+		}
+		terms = tokenize(*askFlag)
+		if len(terms) == 0 {
+			fmt.Fprintln(os.Stderr, "codecore: --ask query must contain a letter or digit")
+			return 2
+		}
+	}
 	if len(paths) == 0 {
 		fmt.Print(helpText())
 		return 0
 	}
-	if *depthFlag < -1 {
+	if *askFlag == "" && *depthFlag < -1 {
 		fmt.Fprintln(os.Stderr, "codecore: --depth must be 0 or more")
 		return 2
 	}
@@ -136,7 +152,13 @@ func run(args []string) int {
 		outlines = append(outlines, o)
 	}
 
-	if err := fmtr.Format(os.Stdout, outlines); err != nil {
+	if *askFlag != "" {
+		results := retrieve(outlines, terms, *topFlag)
+		err = formatResults(os.Stdout, *formatFlag, *askFlag, results)
+	} else {
+		err = fmtr.Format(os.Stdout, outlines)
+	}
+	if err != nil {
 		fmt.Fprintf(os.Stderr, "codecore: %v\n", err)
 		return 1
 	}

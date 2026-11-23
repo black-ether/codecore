@@ -738,3 +738,62 @@ html > head > meta). The stale "(-1 for full)" comment on
 `formatOutline` was corrected — -1 is the default-depth sentinel,
 not "full" (full is a large --depth, e.g. 99). gofmt/vet/test/race
 all pass; fixtures and pp.ps1 unchanged (34/42/28/1494).
+
+## 28. Deterministic retrieval: --ask (2026-11-24)
+
+Jo picked this from the wilder ideas (§3, item 20): a tiny
+deterministic retriever on top of the outline, no embeddings.
+`--ask "query"` ranks the outline nodes whose line text best
+matches the query's words, using BM25. `--top N` caps the
+results (default 5). `--format json` emits the same results as
+a JSON array. `--depth` is ignored (results are flat, not trees);
+`--lang` still applies.
+
+How it works: every outline node is a document, its text is the
+node's line text, and the parent chain is the node's ancestors'
+texts (root first). Query and node text are tokenized the same
+way — lowercased, split on any run of non-letters/non-digits
+(`authenticate_user` becomes `authenticate`, `user`). BM25 with
+k1 = 1.2, b = 0.75; IDF is ln(1 + (N - df + 0.5) / (df + 0.5)).
+Only nodes scoring above 0 are candidates; ties break by file
+then line, so output is deterministic. Each result carries its
+file, line, text, score, and parent chain. No matches prints
+`no matches for "<query>"` (text) or `[]` (JSON), exit 0. A
+query with no searchable terms and `--top` below 1 are flag
+errors (exit 2).
+
+Implementation: `retrieve.go` (tokenize, BM25 index, ranking,
+text/JSON rendering) plus `--ask`/`--top` flags and help text in
+`main.go`. The outline path is untouched — the `--ask` path
+reuses the same outline-building loop. No name extraction and no
+end-line ranges in this version (the minimal version Jo chose):
+results give the header line only, and the agent reads from there.
+
+This was the first feature built with Codex CLI (Jo asked for
+it to assist). It took three attempts: the baked-in Codex
+(v0.164.0) could not run at all — its image lacks the
+`codex-code-mode-host` binary, so it could not touch the
+workspace; the npm Codex (v0.171.0) read the source fine but
+crashed with a Rust panic when it dumped ~73 KB into the output
+pipe faster than it could be drained. The third attempt (npm
+Codex, output redirected to a log file) wrote `retrieve.go`,
+`retrieve_test.go`, `main.go`, and the README "Ask" section —
+then a VM restart cut it off before verification, wiping Go
+and /tmp. Hana reinstalled Go, reviewed the code, and verified
+it herself. Lesson: use `/usr/bin/codex` (npm, v0.171.0), never
+the baked-in one, and always redirect its output to a file.
+
+Tests: `TestTokenize`, `TestBM25Scoring` (rare term beats common,
+short doc beats long doc with the same frequency, identical docs
+tie), `TestRetrieveRanking` (order, file/line tie-break, top-N,
+no-match), `TestRetrieveFromExtractor` (Python source, top result
+and parent chain). gofmt/vet/test/race all pass; fixtures and
+pp.ps1 unchanged (34/42/28/1494). `--ask "sort"` on the Python
+sorts and `--ask "keymap"` on the real Lua files both return
+sensible ranked results with parent chains.
+
+Limits, as designed: it matches words, not meaning — a query
+must contain the actual terms (`auth` will not find `login`),
+and a partial identifier will not match (`auth` will not find
+`authenticate`). Name extraction and end-line ranges are the
+obvious next steps if the minimal version proves useful.
