@@ -14,18 +14,20 @@ go run . --format json <file>
 Languages: Go, PowerShell, JavaScript, TypeScript, Rust, C, C++,
 C#, Java, Kotlin, Swift, Scala, Dart, Groovy, Zig, CSS, JSON, PHP
 (brace parser); Python, Ruby, Perl, Lua, R, Julia, Objective-C,
-Bash, SQL, MATLAB, HTML, XML, LaTeX, Clojure, Haskell, YAML (indent
-parser). One parser per language, chosen by the 33-language test
-database — see `ROUTING.md` for the table and the reasons.
+Bash, SQL, MATLAB, LaTeX, Clojure, Haskell, YAML (indent parser);
+HTML, XML (tag parser). One parser per language, chosen by the
+33-language test database — see `ROUTING.md` for the table and the
+reasons.
 
 ## How it works
 
 codecore folds code blocks the way an editor's "fold all" does:
-indentation for Python, brackets for Go and PowerShell. Every code
-line is shown; a line that opens a multi-line block shows its contents
-nested underneath it. There are no kind labels and no parsing — the
-outline is the file's lines, nested by their blocks. That is the whole
-model, and it is the same for all three languages.
+indentation for Python, brackets for Go and PowerShell, tags for
+HTML and XML. Every code line is shown; a line that opens a
+multi-line block shows its contents nested underneath it. There are
+no kind labels and no parsing — the outline is the file's lines,
+nested by their blocks. That is the whole model, and it is the same
+for every language.
 
 ## Output
 
@@ -124,14 +126,16 @@ CGo, no C compiler, no network on first run. `go mod tidy` works; see
 
 ## Adding a language
 
-There are two parsers, not one per language: the indent parser
-(`parsePython` in `fold_python.go`) and the brace parser
-(`parseBraces` in `fold_braces.go`). Adding a language means
-choosing which one handles it best — test it against both on real
-code first (see `testdb/CHECKLIST.md` for the method), then
+There are three parsers, not one per language: the indent parser
+(`parsePython` in `fold_python.go`), the brace parser
+(`parseBraces` in `fold_braces.go`), and the tag parser
+(`parseTags` in `fold_tags.go`, for HTML/XML). Adding a language
+means choosing which one handles it best — test it against both on
+real code first (see `testdb/CHECKLIST.md` for the method), then
 register it in `init()` in `fold.go` with its language name,
-extensions, and `parser: "indent"` or `parser: "braces"`. The
-routing table in `ROUTING.md` is the record of those choices.
+extensions, and `parser: "indent"`, `parser: "braces"`, or
+`parser: "tags"`. The routing table in `ROUTING.md` is the record
+of those choices.
 If neither parser handles the language, write a new fold parser
 in a `fold_<name>.go` (a function that turns lines into
 `[]*Node`), register it the same way, and add a

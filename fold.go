@@ -28,15 +28,16 @@ func splitLines(src []byte) []string {
 }
 
 // foldExtractor is the one extractor for every language: it folds
-// blocks by indentation or by brackets and returns the resulting
-// tree of lines. The parser field says which one — "indent" or
-// "braces" — and comes from the per-language routing table below,
-// built from the 33-language test database (testdb/CHECKLIST.md).
-// One parser per language, chosen by which handled it best.
+// blocks by indentation, by brackets, or by tags, and returns the
+// resulting tree of lines. The parser field says which one —
+// "indent", "braces", or "tags" — and comes from the per-language
+// routing table below, built from the 33-language test database
+// (testdb/CHECKLIST.md). One parser per language, chosen by which
+// handled it best.
 type foldExtractor struct {
 	language   string
 	extensions []string
-	parser     string // "indent" or "braces"
+	parser     string // "indent", "braces", or "tags"
 }
 
 func (e foldExtractor) Language() string     { return e.language }
@@ -49,6 +50,8 @@ func (e foldExtractor) Extract(filename string, src []byte) (*Outline, error) {
 	switch e.parser {
 	case "indent":
 		nodes = parsePython(lines)
+	case "tags":
+		nodes, unbalanced = parseTags(lines)
 	default:
 		nodes, unbalanced = parseBraces(lines, e.language)
 	}
@@ -98,10 +101,16 @@ func init() {
 	RegisterExtractor(foldExtractor{language: "matlab", extensions: []string{".m"}, parser: "indent"})
 	RegisterExtractor(foldExtractor{language: "bash", extensions: []string{".sh", ".bash"}, parser: "indent"})
 	RegisterExtractor(foldExtractor{language: "sql", extensions: []string{".sql"}, parser: "indent"})
-	RegisterExtractor(foldExtractor{language: "html", extensions: []string{".html", ".htm"}, parser: "indent"})
-	RegisterExtractor(foldExtractor{language: "xml", extensions: []string{".xml"}, parser: "indent"})
 	RegisterExtractor(foldExtractor{language: "latex", extensions: []string{".tex"}, parser: "indent"})
 	RegisterExtractor(foldExtractor{language: "clojure", extensions: []string{".clj", ".cljs", ".edn"}, parser: "indent"})
 	RegisterExtractor(foldExtractor{language: "haskell", extensions: []string{".hs"}, parser: "indent"})
 	RegisterExtractor(foldExtractor{language: "yaml", extensions: []string{".yml", ".yaml"}, parser: "indent"})
+
+	// Tag languages: the structure is in the tags themselves, so the
+	// tag parser reads them and nests correctly regardless of
+	// indentation. It replaces the indent-parser rules for HTML/XML
+	// (the </...> and <!-- --> rules stay in the indent parser as
+	// harmless generic rules, but no routed language uses them now).
+	RegisterExtractor(foldExtractor{language: "html", extensions: []string{".html", ".htm"}, parser: "tags"})
+	RegisterExtractor(foldExtractor{language: "xml", extensions: []string{".xml"}, parser: "tags"})
 }

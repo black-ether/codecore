@@ -679,3 +679,34 @@ files pass. The 3 Bash test files have no .sh extension, so they
 cannot route by extension (they still work with --lang python).
 Fixtures and pp.ps1 unchanged (34/42/28/1494); real Lua keymap.lua
 still 50 nodes. gofmt/vet/test/race all pass.
+
+## 26. Tag parser wired in for HTML/XML (2026-11-24)
+
+Jo's Gemini reply (message 1a20919930872a3d) finished the tag
+parser; Hana compared it against the indent-parser fix on the 6
+test files + 8 extra files and found two real bugs that lose code
+(a line starting with `<!--` was skipped entirely even when code
+followed the comment; multi-line void element attributes were
+lost). Both were fixed (see testdb/tag-comparison/COMPARISON.md)
+and re-tested on all 14 files, and Jo said to wire it in.
+
+The fixed parser is now `fold_tags.go` (Gemini-generated, with
+Hana's two fixes and a header noting the origin). `foldExtractor`
+gained a third parser value, `"tags"`, and `Extract` dispatches
+`parseTags` for it. HTML (`.html`, `.htm`) and XML (`.xml`) are
+now registered with `parser: "tags"` instead of `"indent"`. The
+`</...>` and `<!-- -->` rules stay in the indent parser as
+harmless generic rules, but no routed language uses them now.
+Regression tests `TestFoldTags` (nesting by tags, comment+code,
+multi-line void attributes, CDATA, balanced) and
+`TestFoldTagsUnbalanced` (unclosed tag marks `"unbalanced": true`
+but still returns the outline).
+
+Verification: the default run was re-compared against the forced
+run of the routed parser for every test file — 102 files pass, 0
+mismatched (the 3 Bash files still skipped for no extension).
+Fixtures and pp.ps1 unchanged (34/42/28/1494); real Lua keymap.lua
+still 50 nodes. gofmt/vet/test/race all pass. README (Languages
+line, "How it works", "Adding a language") and ROUTING.md (new
+Tag parser section, fix 11, minified-HTML limit updated,
+verification re-run) updated; CHECKLIST Routing section updated.

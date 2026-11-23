@@ -612,6 +612,88 @@ func TestFoldPythonHTMLTagsAndComments(t *testing.T) {
 	}
 }
 
+// The tag parser reads the tags, not the indentation: it nests
+// correctly on badly indented files, hides CDATA, keeps code that
+// follows a comment on the same line, and tracks a multi-line void
+// element's attributes until its '>' arrives. (HTML/XML route to
+// the tag parser; the indent-parser test above covers the old rules.)
+func TestFoldTags(t *testing.T) {
+	src := `<html>
+<head>
+<!-- a comment --><style type="text/css">x { color: red; }</style>
+<meta
+  charset="utf-8"
+  name="viewport">
+<![CDATA[ <fake>not a tag</fake> ]]>
+<title>Hi</title>
+</head>
+<body>
+<p>Text</p>
+</body>
+</html>
+`
+	ext, ok := ExtractorByLanguage("html")
+	if !ok {
+		t.Fatal("no html extractor")
+	}
+	o, err := ext.Extract("tags.html", []byte(src))
+	if err != nil {
+		t.Fatalf("extract tags.html: %v", err)
+	}
+	// Comment + code: the <style> on L:3 survives its leading comment.
+	if n := findNode(o, 3); n == nil {
+		t.Error("comment+code L:3 should be a node")
+	}
+	// Multi-line void element: the attributes nest under <meta>, and
+	// the '>' line (L:6) is part of the tag, not a node.
+	if n := findNode(o, 5); n == nil {
+		t.Error("void attribute L:5 should be a node")
+	}
+	if n := findNode(o, 6); n != nil {
+		t.Errorf("void '>' line L:6 should not be a node, got %v", n)
+	}
+	// CDATA content is not markup.
+	if n := findNode(o, 7); n != nil {
+		t.Errorf("CDATA L:7 should not be a node, got %v", n)
+	}
+	// Badly indented file still nests by tags: <head> has children.
+	if n := findNode(o, 2); n == nil || len(n.Children) == 0 {
+		t.Error("<head> L:2 should nest children")
+	}
+	if o.Unbalanced {
+		t.Error("well-formed file should not be unbalanced")
+	}
+	total, blocks, _ := countNodes(o)
+	if total != 8 || blocks != 4 {
+		t.Errorf("tags: total=%d blocks=%d, want 8/4", total, blocks)
+	}
+}
+
+// An unclosed tag marks the outline unbalanced but still returns it.
+func TestFoldTagsUnbalanced(t *testing.T) {
+	src := `<html>
+<body>
+<div>
+<p>Unclosed
+</body>
+</html>
+`
+	ext, ok := ExtractorByLanguage("html")
+	if !ok {
+		t.Fatal("no html extractor")
+	}
+	o, err := ext.Extract("bad.html", []byte(src))
+	if err != nil {
+		t.Fatalf("extract bad.html: %v", err)
+	}
+	if !o.Unbalanced {
+		t.Error("unclosed <div> should mark the outline unbalanced")
+	}
+	if n := findNode(o, 4); n == nil {
+		t.Error("<p> L:4 should still be a node")
+	}
+}
+
 // A #[...] attribute line is not a comment: in Rust, # starts an
 // attribute, not a comment. A plain # line is still skipped.
 func TestFoldPythonAttributes(t *testing.T) {
