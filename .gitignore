@@ -1,0 +1,7 @@
+# Built binary (go build in this directory produces ./codecore)
+/codecore
+/codecore-fold
+
+# Local test database: downloaded scripts from other repos, still
+# in progress, not part of the tool itself.
+testdb/

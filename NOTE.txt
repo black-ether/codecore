@@ -1,0 +1,16 @@
+NOTE — why testdata/sample.ps1 is missing
+==========================================
+
+Gmail blocks .ps1 files even inside zip attachments, so the PowerShell
+test fixture (testdata/sample.ps1) is left out of this zip on purpose.
+
+The PowerShell test (TestFoldPowerShell) skips itself when the
+fixture is absent, so `go test ./...` stays green. Everything else
+works as normal, including:
+
+  go run . <your-file.ps1>
+
+which outlines any PowerShell script on your machine.
+
+First run on your machine needs only Go 1.27 — no C compiler and no
+network. codecore has zero dependencies (standard library only).
