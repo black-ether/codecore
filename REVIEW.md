@@ -328,3 +328,47 @@ Still open: the doc-first-line half of the original idea
 (docstrings are hidden by design, so capturing them for ranking
 would need the parsers to record them), and the open decisions
 in section 2 (#4, #8, #9, #12).
+
+## 9. Recursive directory walking (2026-11-24)
+
+Jo: "Yes let's do that." The directory mode was flat — a directory
+expanded to its top-level files only. Now `collectFiles` walks
+recursively with `filepath.WalkDir`, so `codecore testdb` outlines
+all 110 code files across every language subdirectory, and
+`--ask "sort" testdb` searches the whole tree at once. That is the
+real win: --ask becomes a repo-wide search, with the ranking
+computed across all files.
+
+Two filters keep the walk usable. Only files with a registered
+extractor extension are included; the rest are skipped silently,
+because a repo holds many non-code files and erroring on each
+would be noise. And a short hardcoded skip list is never descended
+into: `.git`, `node_modules`, `__pycache__`, `.venv`, `venv`,
+`vendor`, `target`, `dist`, `build`. The root directory itself is
+never skipped, even when its own name is in the list — passing
+`build` directly walks it. A file passed directly is always kept,
+even without a registered extension; the extractor reports it
+when the file is read. Symlinks are not followed, so a symlink
+cycle cannot loop the walk. The collected files are sorted by
+path, and overlapping inputs are deduplicated, so the output does
+not depend on the order the paths were typed.
+
+The outline and retrieval code did not change — they just receive
+more files. Respecting `.gitignore` would be the more thorough
+version of the skip list; that is a follow-up, not part of this
+cut. A package view (which file imports which, call edges across
+files) is a separate, deeper feature — the walk is only the
+file-finding layer underneath it.
+
+Tests: `TestCollectFilesRecursive` (a nested tree, junk dirs and
+unregistered files skipped), `TestCollectFilesDirectFileKept`,
+`TestCollectFilesRootSkipDirKept`, `TestCollectFilesSorted`
+(overlapping inputs deduplicated). The sorted test caught a real
+behaviour gap: passing a directory and one of its subdirectories
+duplicated the subdirectory's files, so `collectFiles` now
+deduplicates. gofmt/vet/test/race all pass; fixtures and pp.ps1
+unchanged (34/42/28/1494). `--ask "sort" testdb` now returns
+matches from MATLAB, Ruby, and Rust files in one ranked list;
+`--ask "keymap" testdb` finds the real-Lua keymap files. This
+closes con #12's cheap half (recursive walking); the package-view
+half stays open, as does #4.

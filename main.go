@@ -4,8 +4,10 @@ import (
 	"flag"
 	"fmt"
 	"io"
+	"io/fs"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 )
 
@@ -165,31 +167,60 @@ func run(args []string) int {
 	return 0
 }
 
-// collectFiles expands paths: a file is kept as-is, a directory expands to
-// its files with a registered extractor extension (non-recursive, sorted
-// — os.ReadDir already sorts).
+// skipDirs are the directories a recursive walk never descends into:
+// version control, dependency trees, build output, and caches. Walking
+// into them would flood the output with files the user did not ask for.
+var skipDirs = map[string]bool{
+	".git": true, "node_modules": true, "__pycache__": true,
+	".venv": true, "venv": true, "vendor": true,
+	"target": true, "dist": true, "build": true,
+}
+
+// collectFiles expands paths: a file is kept as-is, a directory expands
+// recursively to its files with a registered extractor extension
+// (sorted by path). Directories in skipDirs are never descended into,
+// and files without a registered extension are skipped silently — a
+// repo holds many non-code files, and erroring on each would be noise.
+// A file passed directly is kept even without a registered extension;
+// the extractor reports it when the file is read. The root directory
+// itself is never skipped, even when its name is in skipDirs.
 func collectFiles(paths []string) ([]string, error) {
 	var files []string
+	seen := make(map[string]bool)
+	add := func(p string) {
+		if !seen[p] {
+			seen[p] = true
+			files = append(files, p)
+		}
+	}
 	for _, p := range paths {
 		info, err := os.Stat(p)
 		if err != nil {
 			return nil, err
 		}
 		if !info.IsDir() {
-			files = append(files, p)
+			add(p)
 			continue
 		}
-		entries, err := os.ReadDir(p)
+		err = filepath.WalkDir(p, func(path string, d fs.DirEntry, err error) error {
+			if err != nil {
+				return err
+			}
+			if d.IsDir() {
+				if path != p && skipDirs[d.Name()] {
+					return filepath.SkipDir
+				}
+				return nil
+			}
+			if _, ok := ExtractorFor(d.Name()); ok {
+				add(path)
+			}
+			return nil
+		})
 		if err != nil {
 			return nil, err
 		}
-		for _, e := range entries {
-			if !e.IsDir() {
-				if _, ok := ExtractorFor(e.Name()); ok {
-					files = append(files, filepath.Join(p, e.Name()))
-				}
-			}
-		}
 	}
+	sort.Strings(files)
 	return files, nil
 }

@@ -7,7 +7,7 @@ go run .                  # help page
 go run . <file>           # outline one file (top level only)
 go run . --depth 1 <file> # top level + one level inside each block
 go run . <file> ...       # outline several files
-go run . <dir>            # outline all supported files in a directory
+go run . <dir>            # outline all supported files in a directory, recursively
 go run . --format json <file>
 ```
 
@@ -17,7 +17,11 @@ C#, Java, Kotlin, Swift, Scala, Dart, Groovy, Zig, CSS, JSON, PHP
 Bash, SQL, MATLAB, LaTeX, Clojure, Haskell, YAML (indent parser);
 HTML, XML (tag parser). One parser per language, chosen by the
 33-language test database — see `ROUTING.md` for the table and the
-reasons.
+reasons. A directory argument is walked recursively (sorted by
+path, overlapping inputs deduplicated); `.git`, `node_modules`,
+`__pycache__`, `.venv`, `vendor`, `target`, `dist`, and `build`
+are never descended into, and files without a supported extension
+are skipped silently. A file passed directly is always kept.
 
 ## How it works
 
