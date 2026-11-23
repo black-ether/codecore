@@ -15,6 +15,7 @@ type retrievalResult struct {
 	File    string   `json:"file"`
 	Line    int      `json:"line"`
 	End     int      `json:"end"`
+	Name    string   `json:"name,omitempty"`
 	Text    string   `json:"text"`
 	Score   float64  `json:"score"`
 	Parents []string `json:"parents,omitempty"`
@@ -32,6 +33,122 @@ type retrievalDocument struct {
 	length  int
 	parents []string
 	end     int
+	name    string
+}
+
+// definitionKeywords are the words that introduce a definition. A line
+// whose first identifier is one of these defines a symbol; a line that
+// merely calls or uses a symbol does not. Only definitions get the name
+// boost, so a definition ranks above a use of the same name.
+var definitionKeywords = map[string]bool{
+	"def": true, "func": true, "function": true, "fn": true,
+	"class": true, "struct": true, "interface": true, "type": true,
+	"let": true, "var": true, "const": true, "local": true,
+	"public": true, "private": true, "protected": true, "static": true,
+	"async": true, "export": true, "method": true, "proc": true,
+	"trait": true, "impl": true, "enum": true,
+}
+
+// nameBoost is how many extra times a name's tokens count in BM25. A
+// name term therefore counts 1 + nameBoost times (once from the line
+// text, nameBoost times from the name), so a definition ranks above a
+// mere mention of the same word.
+const nameBoost = 2
+
+// extractName returns the key identifier of a line and whether the line
+// defines it. The name is the last identifier before the first "(",
+// "[", "=", ":" or "{" (the delimiter that starts the parameter list,
+// the index, the assignment, or the body), extended backwards over
+// ".identifier" segments so a method keeps its dotted path
+// (keymap.set, not just set). The "[" matters: in a generic like
+// def quick_sort[T: Comparable](...) the ":" inside the brackets is not
+// the header colon, and the "[" stops the scan before it. For a
+// definition it is the defined name (def quick_sort, func foo,
+// class Manager, x = 1); for a call it is the called function
+// (return authenticate_user()). An identifier starts with a letter or
+// underscore and continues with letters, digits and underscores.
+// A line defines its name when its first identifier is a definition
+// keyword, or when the delimiter is a single "=" (an assignment, not a
+// comparison). Returns ("", false) when there is no usable name.
+func extractName(text string) (string, bool) {
+	runes := []rune(text)
+	// The name is in the text before the first delimiter. A "[" or "{"
+	// is a delimiter only when attached to a name (a generic, an index,
+	// or a block opener). A standalone list or dict literal is not —
+	// the name is inside it (return [*quick_sort(...)] names
+	// quick_sort, not return).
+	end := len(runes)
+	for i, r := range runes {
+		if r == '(' || r == '=' || r == ':' {
+			end = i
+			break
+		}
+		if r == '[' && i > 0 && (unicode.IsLetter(runes[i-1]) || unicode.IsDigit(runes[i-1]) || runes[i-1] == '_') {
+			end = i
+			break
+		}
+		if r == '{' && i > 0 && (runes[i-1] == ')' || runes[i-1] == ':' || unicode.IsLetter(runes[i-1]) || unicode.IsDigit(runes[i-1]) || runes[i-1] == '_') {
+			end = i
+			break
+		}
+	}
+	prefix := runes[:end]
+	// Collect identifiers (with rune starts) in the prefix.
+	type id struct {
+		text  string
+		start int
+	}
+	var ids []id
+	start := -1
+	for i, r := range prefix {
+		if unicode.IsLetter(r) || unicode.IsDigit(r) || r == '_' {
+			if start < 0 && (unicode.IsLetter(r) || r == '_') {
+				start = i
+			}
+		} else if start >= 0 {
+			ids = append(ids, id{string(prefix[start:i]), start})
+			start = -1
+		}
+	}
+	if start >= 0 {
+		ids = append(ids, id{string(prefix[start:]), start})
+	}
+	if len(ids) == 0 {
+		return "", false
+	}
+	// A definition starts with a definition keyword, or assigns with a
+	// single "=" (not "==", "!=", "<=" or ">=").
+	isDef := definitionKeywords[strings.ToLower(ids[0].text)]
+	if !isDef && end < len(runes) && runes[end] == '=' {
+		after := end+1 < len(runes) && runes[end+1] == '='
+		before := end > 0 && (runes[end-1] == '!' || runes[end-1] == '<' || runes[end-1] == '>')
+		isDef = !after && !before
+	}
+	// The name is the last identifier, skipping definition keywords
+	// (a Go method with a receiver lands on "func" and has no earlier
+	// identifier to fall back to, so it has no usable name), extended
+	// backwards over ".identifier" segments.
+	for i := len(ids) - 1; i >= 0; i-- {
+		if definitionKeywords[strings.ToLower(ids[i].text)] {
+			continue
+		}
+		name := ids[i].text
+		pos := ids[i].start
+		for pos > 0 && prefix[pos-1] == '.' {
+			// Find the identifier ending just before the dot.
+			e := pos - 1
+			for e > 0 && (unicode.IsLetter(prefix[e-1]) || unicode.IsDigit(prefix[e-1]) || prefix[e-1] == '_') {
+				e--
+			}
+			if e == pos-1 || (!unicode.IsLetter(prefix[e]) && prefix[e] != '_') {
+				break
+			}
+			name = string(prefix[e:pos-1]) + "." + name
+			pos = e
+		}
+		return name, isDef
+	}
+	return "", false
 }
 
 // endLine returns the last line of the outline lines in node's block:
@@ -62,12 +179,26 @@ func retrieve(outlines []*Outline, terms []string, top int) []retrievalResult {
 	walk = func(file string, nodes []*Node, parents []string) {
 		for _, node := range nodes {
 			tokens := tokenize(node.Text)
+			name, isDef := extractName(node.Text)
+			// Only a definition's name is boosted, so a definition
+			// ranks above a mere use of the same name. The boost
+			// raises term frequency only — it does not lengthen the
+			// document, so a long definition line is not penalised
+			// for the boost itself.
+			nameTokens := []string{}
+			if isDef {
+				nameTokens = tokenize(name)
+			}
+			length := len(tokens)
 			id := len(documents)
-			documents = append(documents, retrievalDocument{file, node, len(tokens), parents, endLine(node)})
-			totalLength += len(tokens)
+			documents = append(documents, retrievalDocument{file, node, length, parents, endLine(node), name})
+			totalLength += length
 			frequencies := make(map[string]int)
 			for _, token := range tokens {
 				frequencies[token]++
+			}
+			for _, token := range nameTokens {
+				frequencies[token] += nameBoost
 			}
 			for term, frequency := range frequencies {
 				postings[term] = append(postings[term], termOccurrence{id, frequency})
@@ -107,7 +238,7 @@ func retrieve(outlines []*Outline, terms []string, top int) []retrievalResult {
 	for i, doc := range documents {
 		if scores[i] > 0 {
 			results = append(results, retrievalResult{
-				File: doc.file, Line: doc.node.Line, End: doc.end, Text: doc.node.Text,
+				File: doc.file, Line: doc.node.Line, End: doc.end, Name: doc.name, Text: doc.node.Text,
 				Score: scores[i], Parents: doc.parents,
 			})
 		}

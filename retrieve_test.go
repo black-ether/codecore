@@ -74,6 +74,71 @@ func TestRetrieveRanking(t *testing.T) {
 	}
 }
 
+func TestExtractName(t *testing.T) {
+	cases := []struct {
+		line string
+		name string
+		def  bool
+	}{
+		{"def quick_sort[T: Comparable](collection: list[T]) -> list[T]:", "quick_sort", true},
+		{"func foo() {", "foo", true},
+		{"class Manager:", "Manager", true},
+		{"x = 1", "x", true},
+		{"local keymap = {}", "keymap", true},
+		{"return authenticate_user()", "authenticate_user", false},
+		{"function keymap.set(modes, lhs, rhs, opts)", "keymap.set", true},
+		{"function keymap.del(modes, lhs, opts)", "keymap.del", true},
+		{"type Foo struct {", "Foo", true},
+		{"type Bar interface {", "Bar", true},
+		{"func (r *Receiver) Method()", "", false},
+		{"if x > 0:", "x", false},
+		{"if x == y:", "x", false},
+		{"x = authenticate_user()", "x", true},
+		{"return [*quick_sort(lesser), *equal, *quick_sort(greater)]", "quick_sort", false},
+		{"vim.api.nvim_set_keymap(m, l, rhs, opts)", "vim.api.nvim_set_keymap", false},
+		{"package sample", "sample", false},
+	}
+	for _, c := range cases {
+		name, def := extractName(c.line)
+		if name != c.name || def != c.def {
+			t.Errorf("extractName(%q) = (%q, %v), want (%q, %v)", c.line, name, def, c.name, c.def)
+		}
+	}
+}
+
+func TestRetrieveNameBoost(t *testing.T) {
+	outlines := []*Outline{{File: "auth.py", Nodes: []*Node{
+		{Line: 1, Text: "def authenticate_user():"},
+		{Line: 5, Text: "return authenticate_user()"},
+	}}}
+	got := retrieve(outlines, tokenize("authenticate user"), 5)
+	if len(got) != 2 {
+		t.Fatalf("got %+v, want 2 results", got)
+	}
+	// The definition ranks above the use of the same name.
+	if got[0].Line != 1 || got[0].Name != "authenticate_user" {
+		t.Errorf("first result = %+v, want the definition at line 1", got[0])
+	}
+	if got[1].Line != 5 || got[1].Name != "authenticate_user" {
+		t.Errorf("second result = %+v, want the use at line 5", got[1])
+	}
+	if got[0].Score <= got[1].Score {
+		t.Errorf("definition score %g should exceed use score %g", got[0].Score, got[1].Score)
+	}
+	// The name is carried in the JSON output.
+	var buf bytes.Buffer
+	if err := formatResults(&buf, "json", "authenticate user", got); err != nil {
+		t.Fatal(err)
+	}
+	var decoded []retrievalResult
+	if err := json.Unmarshal(buf.Bytes(), &decoded); err != nil {
+		t.Fatal(err)
+	}
+	if len(decoded) != 2 || decoded[0].Name != "authenticate_user" {
+		t.Errorf("json output = %+v, want the name on the first result", decoded)
+	}
+}
+
 func TestRetrieveRanges(t *testing.T) {
 	outlines := []*Outline{{File: "ranges.go", Nodes: []*Node{
 		{Line: 1, Text: "func outer()", Children: []*Node{

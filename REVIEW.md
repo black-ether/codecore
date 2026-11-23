@@ -840,3 +840,68 @@ shows `function keymap.set [L:66-112]` and `function keymap.del
 [L:139-166]` — the ranges are the functions' real spans.
 
 Still to come: name matching (§28's other half).
+
+## 30. Name matching: --ask ranks definitions above uses (2026-11-24)
+
+Jo: "Let's move on to the name matching." The minimal `--ask`
+ranked on line text only, so a definition and a call to it scored
+the same. Now each node carries a name, and a definition's name
+counts extra in BM25, so asking for `quick_sort` finds
+`def quick_sort` first, not the calls to it.
+
+The name is extracted by a small language-agnostic heuristic, not
+by per-language rules: it is the last identifier before the first
+delimiter — `(`, `[`, `=`, `:` or `{` — extended backwards over
+".identifier" segments so a method keeps its dotted path
+(`keymap.set`, not just `set`). For a definition it is the defined
+name; for a call it is the called function. A line counts as a
+definition when its first identifier is a definition keyword
+(def, func, function, fn, class, struct, interface, type, let,
+var, const, local, …) or when it assigns with a single "="
+(not "==", "!=", "<=" or ">=") — so `x = 1` defines `x`, while
+`if x == y:` does not. Only definitions get the name boost; a
+use still carries its name in the output, it just does not get
+the extra weight.
+
+Two bugs found by testing the real output, both fixed. First, a
+generic broke the heuristic: in
+`def quick_sort[T: Comparable](...)` the ":" inside the brackets
+is not the header colon, and the scan stopped there, naming the
+line "T". A "[" or "{" is now a delimiter only when attached to
+a name (immediately after an identifier, a ")", or a ":") — a
+standalone list or dict literal is not, so the name is found
+inside it (`return [*quick_sort(...)]` names `quick_sort`, not
+`return`). Second, the boost was cancelling itself out: the
+boosted name tokens were counted in the document length, so a
+long definition line was penalised for the boost meant to help
+it, and the recursive call outranked the definition. The boost
+now raises term frequency only; the document length is the
+plain line length.
+
+The name is carried in the JSON output as a `name` field
+(omitted when a line has no usable name); the text output is
+unchanged, since the name is visible in the line text. The
+scoring change is confined to retrieval — the outline itself,
+its fixtures, and its counts are untouched.
+
+Known limits, as designed. A Go method with a receiver
+(`func (r *Receiver) Method()`) has no usable name: the first
+"(" belongs to the receiver, so the heuristic lands on "func"
+and there is no earlier identifier to fall back to. The name is
+the last identifier, so a line with several calls names only the
+last one. And the doc-first-line half of the original idea is
+still open: docstrings and doc comments are hidden by design,
+so capturing them for ranking would need the parsers to record
+them — a separate change.
+
+Tests: `TestExtractName` (definitions, calls, assignments,
+dotted methods, generics, comparisons, the receiver case) and
+`TestRetrieveNameBoost` (a definition outranks a use of the same
+name, and the name is in the JSON). gofmt/vet/test/race all
+pass; fixtures and pp.ps1 unchanged (34/42/28/1494); real Lua
+keymap.lua still 50 nodes. `--ask "quick_sort"` on the Python
+sorts now puts `def quick_sort [L:21-50]` first (6.58), above
+the recursive call (6.00) and the print call (5.54); `--ask
+"keymap set"` puts `function keymap.set [L:66-112]` first
+(10.60). That completes the full version from §28 — BM25 over
+the outline tree, with names and ranges.

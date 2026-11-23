@@ -89,15 +89,20 @@ go run . --ask "sort" --top 3 testdb/go
 ```
 
 BM25 scores each line using term frequency, term rarity across the
-outline, and line length. A result's end line is the last line of
-the outline lines in its block (its deepest last descendant); a
-single line's end is its own line. For brace languages the closing
-brace line is not an outline node, so it is not included — the range
-covers the outline lines belonging to the block, not the closer.
-Matching uses exact, case-insensitive letter and digit tokens.
-Synonyms and partial identifiers can miss relevant lines. Search
-covers the text retained by the outline, including its line length
-cap.
+outline, and line length. A definition's name counts extra, so a
+definition ranks above a mere use of the same name — asking for
+`quick_sort` finds `def quick_sort` first, not the calls to it.
+The name is the key identifier of the line (the defined name for a
+definition, the called function for a call, the dotted path for a
+method like `keymap.set`); it is carried in the JSON output as a
+`name` field. A result's end line is the last line of the outline
+lines in its block (its deepest last descendant); a single line's
+end is its own line. For brace languages the closing brace line is
+not an outline node, so it is not included — the range covers the
+outline lines belonging to the block, not the closer. Matching uses
+exact, case-insensitive letter and digit tokens. Synonyms and
+partial identifiers can miss relevant lines. Search covers the text
+retained by the outline, including its line length cap.
 
 ## Design
 
