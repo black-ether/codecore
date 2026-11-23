@@ -38,6 +38,10 @@ type foldExtractor struct {
 	language   string
 	extensions []string
 	parser     string // "indent", "braces", or "tags"
+	// defaultDepth is the depth shown when the user does not pass
+	// --depth. HTML/XML default to 2 (their top level is a single
+	// wrapper tag, so 0 shows almost nothing); everything else is 0.
+	defaultDepth int
 }
 
 func (e foldExtractor) Language() string     { return e.language }
@@ -56,10 +60,11 @@ func (e foldExtractor) Extract(filename string, src []byte) (*Outline, error) {
 		nodes, unbalanced = parseBraces(lines, e.language)
 	}
 	return &Outline{
-		File:       filename,
-		Language:   e.language,
-		Unbalanced: unbalanced,
-		Nodes:      nodes,
+		File:         filename,
+		Language:     e.language,
+		Unbalanced:   unbalanced,
+		DefaultDepth: e.defaultDepth,
+		Nodes:        nodes,
 	}, nil
 }
 
@@ -111,6 +116,9 @@ func init() {
 	// indentation. It replaces the indent-parser rules for HTML/XML
 	// (the </...> and <!-- --> rules stay in the indent parser as
 	// harmless generic rules, but no routed language uses them now).
-	RegisterExtractor(foldExtractor{language: "html", extensions: []string{".html", ".htm"}, parser: "tags"})
-	RegisterExtractor(foldExtractor{language: "xml", extensions: []string{".xml"}, parser: "tags"})
+	// Their default depth is 2: the top level is a single wrapper
+	// tag (<html>, <manifest>, <resources>), so depth 0 shows
+	// almost nothing.
+	RegisterExtractor(foldExtractor{language: "html", extensions: []string{".html", ".htm"}, parser: "tags", defaultDepth: 2})
+	RegisterExtractor(foldExtractor{language: "xml", extensions: []string{".xml"}, parser: "tags", defaultDepth: 2})
 }

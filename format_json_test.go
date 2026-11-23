@@ -65,3 +65,26 @@ func TestJSONFormatterDepth(t *testing.T) {
 		t.Errorf("deep JSON should not mark hasMore:\n%s", buf.String())
 	}
 }
+
+// JSON honours the language default too: Depth -1 on an HTML
+// outline shows two levels (html > head > meta), not just the top.
+func TestJSONFormatterDefaultDepth(t *testing.T) {
+	o := mustExtract(t, "testdb/html/boilerplate-index.html")
+	var buf bytes.Buffer
+	if err := (JSONFormatter{Depth: -1}).Format(&buf, []*Outline{o}); err != nil {
+		t.Fatal(err)
+	}
+	var out []map[string]any
+	if err := json.Unmarshal(buf.Bytes(), &out); err != nil {
+		t.Fatal(err)
+	}
+	htmlNode := out[0]["nodes"].([]any)[1].(map[string]any)
+	head, ok := htmlNode["children"].([]any)
+	if !ok || len(head) != 2 {
+		t.Fatalf("html JSON Depth -1 children = %v, want 2 (head, body)", htmlNode["children"])
+	}
+	headNode := head[0].(map[string]any)
+	if _, ok := headNode["children"]; !ok {
+		t.Errorf("head JSON node should carry children at the default depth: %v", headNode)
+	}
+}

@@ -6,8 +6,9 @@ import (
 	"testing"
 )
 
-// formatOutline renders one outline at the given depth (-1 for full)
-// and returns its lines. Every line must start with [L: at column 0.
+// formatOutline renders one outline at the given depth (-1 for the
+// language's default depth) and returns its lines. Every line must
+// start with [L: at column 0.
 func formatOutline(t *testing.T, depth int, o *Outline) []string {
 	t.Helper()
 	var buf bytes.Buffer
@@ -154,5 +155,40 @@ func TestTextFormatterDepth2(t *testing.T) {
 	}
 	if !strings.Contains(lines[2], "for y { … (1 more)") {
 		t.Errorf("depth-2 line 2 = %q, want the marked for header", lines[2])
+	}
+}
+
+// Depth -1 means "use the language's default depth": HTML/XML
+// default to 2 (their top level is a single wrapper tag, so 0
+// shows almost nothing), everything else defaults to 0.
+func TestDefaultDepth(t *testing.T) {
+	html := mustExtract(t, "testdb/html/boilerplate-index.html")
+	if html.DefaultDepth != 2 {
+		t.Errorf("html DefaultDepth = %d, want 2", html.DefaultDepth)
+	}
+	py := mustExtract(t, "testdata/sample.py")
+	if py.DefaultDepth != 0 {
+		t.Errorf("python DefaultDepth = %d, want 0", py.DefaultDepth)
+	}
+	// An HTML outline at Depth -1 renders the same as at depth 2;
+	// a Python outline at Depth -1 renders the same as at depth 0.
+	if a, b := formatOutline(t, -1, html), formatOutline(t, 2, html); len(a) != len(b) {
+		t.Errorf("html Depth -1 = %d lines, want depth-2 count %d", len(a), len(b))
+	}
+	if a, b := formatOutline(t, -1, py), formatOutline(t, 0, py); len(a) != len(b) {
+		t.Errorf("python Depth -1 = %d lines, want depth-0 count %d", len(a), len(b))
+	}
+	// The HTML default actually shows two levels: <head> and <body>
+	// nest under <html>, and their children show too.
+	joined := strings.Join(formatOutline(t, -1, html), "\n")
+	for _, want := range []string{"<head>", "<body>", `<meta charset="utf-8">`, "<p>Hello world! This is HTML5 Boilerplate.</p>"} {
+		if !strings.Contains(joined, want) {
+			t.Errorf("html default depth missing %q", want)
+		}
+	}
+	// An explicit --depth 0 still shows only the top level, even
+	// for HTML: the default does not override a user's choice.
+	if got := formatOutline(t, 0, html); len(got) != 2 {
+		t.Errorf("html Depth 0 = %d lines, want 2 (doctype + html)", len(got))
 	}
 }

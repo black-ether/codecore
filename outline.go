@@ -39,12 +39,17 @@ type Node struct {
 
 // Outline is the extraction result for one file. Unbalanced is set when
 // the file's brackets did not balance: the outline is then partial
-// rather than failing.
+// rather than failing. DefaultDepth is the depth the CLI shows when
+// the user does not pass --depth: 0 for most languages (top level
+// only), 2 for HTML/XML, whose top level is a single wrapper tag
+// and 0 would show almost nothing. It is a display concern, not
+// part of the outline data, so it is excluded from JSON output.
 type Outline struct {
-	File       string  `json:"file"`
-	Language   string  `json:"language"`
-	Unbalanced bool    `json:"unbalanced,omitempty"`
-	Nodes      []*Node `json:"nodes"`
+	File         string  `json:"file"`
+	Language     string  `json:"language"`
+	Unbalanced   bool    `json:"unbalanced,omitempty"`
+	DefaultDepth int     `json:"-"`
+	Nodes        []*Node `json:"nodes"`
 }
 
 // Extractor turns source bytes into an Outline. Implementations must be

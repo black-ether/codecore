@@ -36,7 +36,8 @@ line number, always at the far left and padded to the widest tag in
 the output so the lines line up; children are indented two spaces per
 level.
 
-By default only the top level is shown — the big picture. A line
+By default the top level is shown — the big picture (HTML/XML show
+two levels, since their top level is a single wrapper tag). A line
 marked ` … (N more)` opens further, and N says how many outline lines
 hide inside it, so you can tell at a glance which blocks are worth
 opening. `--depth 1` shows one level inside each block, `--depth 2`

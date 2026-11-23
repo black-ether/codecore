@@ -710,3 +710,31 @@ still 50 nodes. gofmt/vet/test/race all pass. README (Languages
 line, "How it works", "Adding a language") and ROUTING.md (new
 Tag parser section, fix 11, minified-HTML limit updated,
 verification re-run) updated; CHECKLIST Routing section updated.
+
+## 27. Default depth 2 for HTML/XML (2026-11-24)
+
+Jo: "Adjust the default depth of html/XML to level 2. The default
+depth is not very helpful." The default was 0 for every language,
+and for HTML/XML the top level is a single wrapper tag (`<html>`,
+`<manifest>`, `<resources>`), so depth 0 showed almost nothing.
+
+The default is now per language. `Outline` carries a
+`DefaultDepth` (excluded from JSON output — it is a display
+concern, not outline data); `foldExtractor` has a `defaultDepth`
+field set at registration (2 for HTML/XML, 0 for everything
+else). Both formatters treat a negative `Depth` as "use the
+outline's default depth", so a directory of mixed languages
+renders each file at its own default. The CLI's `--depth` flag
+now defaults to -1 (not specified); an explicit `--depth 0`
+still shows only the top level, so the default never overrides
+a user's choice. Help text and README updated.
+
+Tests: `TestDefaultDepth` (html DefaultDepth is 2, python is 0;
+Depth -1 renders HTML like depth 2 and Python like depth 0; the
+HTML default shows `<head>`, `<body>`, and their children; an
+explicit depth 0 on HTML still shows only 2 lines) and
+`TestJSONFormatterDefaultDepth` (JSON at Depth -1 shows
+html > head > meta). The stale "(-1 for full)" comment on
+`formatOutline` was corrected — -1 is the default-depth sentinel,
+not "full" (full is a large --depth, e.g. 99). gofmt/vet/test/race
+all pass; fixtures and pp.ps1 unchanged (34/42/28/1494).

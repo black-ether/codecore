@@ -41,7 +41,13 @@ func (f TextFormatter) Format(w io.Writer, outlines []*Outline) error {
 	rows := make([][]textRow, len(outlines))
 	width := 0
 	for i, o := range outlines {
-		rows[i] = collectRows(o.Nodes, 0, f.Depth)
+		// A negative Depth means "use the language's default depth"
+		// (0 for most languages, 2 for HTML/XML).
+		depth := f.Depth
+		if depth < 0 {
+			depth = o.DefaultDepth
+		}
+		rows[i] = collectRows(o.Nodes, 0, depth)
 		for _, r := range rows[i] {
 			if len(r.tag) > width {
 				width = len(r.tag)

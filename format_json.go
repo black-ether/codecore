@@ -34,11 +34,17 @@ type jsonOutline struct {
 func (f JSONFormatter) Format(w io.Writer, outlines []*Outline) error {
 	out := make([]*jsonOutline, 0, len(outlines))
 	for _, o := range outlines {
+		// A negative Depth means "use the language's default depth"
+		// (0 for most languages, 2 for HTML/XML).
+		depth := f.Depth
+		if depth < 0 {
+			depth = o.DefaultDepth
+		}
 		out = append(out, &jsonOutline{
 			File:       o.File,
 			Language:   o.Language,
 			Unbalanced: o.Unbalanced,
-			Nodes:      convertNodes(o.Nodes, 0, f.Depth),
+			Nodes:      convertNodes(o.Nodes, 0, depth),
 		})
 	}
 	enc := json.NewEncoder(w)

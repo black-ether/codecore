@@ -19,7 +19,9 @@ Usage:
 Flags:
   --format text|json   output format (default text)
   --lang <name>        language: auto (by extension) or a name (default auto)
-  --depth N            show the first N levels (default 0: top level only)
+  --depth N            show the first N levels (default: per language —
+                       0 for most, 2 for HTML/XML, whose top level is a
+                       single wrapper tag)
   -h, --help           show this help
 
 With no arguments, this help is shown. Flags come before paths.
@@ -37,8 +39,9 @@ Output (text):
 
   One line per code line. The [L:n] tag is the 1-based line number,
   always at the far left and padded so the lines line up; children are
-  indented two spaces per level. By default only the top level is
-  shown — the big picture. A line marked " … (N more)" opens further:
+  indented two spaces per level. By default the top level is shown —
+  the big picture (HTML/XML show two levels, since their top level is
+  a single wrapper tag). A line marked " … (N more)" opens further:
   it hides N outline lines inside it. Use --depth 1 to see one level
   inside each block, --depth 2 for two, and so on, one depth at a time.
   --format json emits the same tree, cut to the same depth, with
@@ -62,7 +65,10 @@ func run(args []string) int {
 	fs.SetOutput(io.Discard)
 	formatFlag := fs.String("format", "text", "output format: text|json")
 	langFlag := fs.String("lang", "auto", "language name or auto")
-	depthFlag := fs.Int("depth", 0, "levels to show (0: top level only)")
+	// -1 means "not specified": the language's default depth is used
+	// (0 for most languages, 2 for HTML/XML). An explicit --depth 0
+	// still shows only the top level.
+	depthFlag := fs.Int("depth", -1, "levels to show (-1: language default)")
 	if err := fs.Parse(args); err != nil {
 		if err == flag.ErrHelp {
 			fmt.Print(helpText())
@@ -77,7 +83,7 @@ func run(args []string) int {
 		fmt.Print(helpText())
 		return 0
 	}
-	if *depthFlag < 0 {
+	if *depthFlag < -1 {
 		fmt.Fprintln(os.Stderr, "codecore: --depth must be 0 or more")
 		return 2
 	}
