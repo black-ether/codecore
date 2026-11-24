@@ -634,3 +634,35 @@ Tested locally by Hana only, not on the agent yet, per Jo's
 instruction. The medium and big cgrep ideas (comment search,
 --lang filter, semantic patterns) are NOT built — they are
 separate decisions.
+
+## 14. Semantic pattern search (--pattern), Phase 1 (2026-11-24)
+
+`--pattern` scans source tokens at every start position and reports overlapping
+matches in file and source order. Matches carry the source lines spanned by
+their first and last tokens. The CLI supports text and JSON output and warns
+when the 1000-result cap truncates the output.
+
+The Go implementation follows cgrep's ideas of token-pattern matching,
+numbered placeholder unification, and lazy, bracket-balanced ellipses. An
+ellipsis can skip up to 64 tokens and stops at a depth-zero semicolon or
+unmatched closer. Phase 1 leaves per-language keyword and native type tables,
+`%` and docstring comment skipping, prefiltering, and matcher fast paths for
+future work.
+
+The demos produced one self-assignment, two function matches, and three
+assignments whose right-hand token matched `NOT STR`.
+
+```text
+$ /tmp/codecore-fold --pattern '_1 = _1' /tmp/codecore-pattern-demo.txt
+  /tmp/codecore-pattern-demo.txt [L:1] x = x
+$ /tmp/codecore-fold --pattern 'func _ ( ... )' testdata/sample.go
+  testdata/sample.go [L:58] func NewServer(cfg Config) *Server { return &Server{cfg: cfg} }
+  testdata/sample.go [L:75] func main() {
+$ /tmp/codecore-fold --pattern '_ = NOT STR' /tmp/codecore-pattern-demo.txt
+  /tmp/codecore-pattern-demo.txt [L:1] x = x
+  /tmp/codecore-pattern-demo.txt [L:2] x = y
+  /tmp/codecore-pattern-demo.txt [L:3] n = 42
+```
+
+At `--depth 99`, the outline counts were 34 for `sample.py`, 42 for
+`sample.go`, 28 for `sample.ps1`, and 1494 for `pp.ps1`.

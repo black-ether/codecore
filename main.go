@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"flag"
 	"fmt"
 	"io"
@@ -25,6 +26,7 @@ Flags:
                        0 for most, 2 for HTML/XML, whose top level is a
                        single wrapper tag)
   --ask "query"        rank matching outline lines at any depth
+  --pattern "pat"      find all structural token-pattern matches
   --top N              maximum results for --ask (default 5)
   --def-only           with --ask, return definitions only
   --per-file           with --ask, return the best match per file only
@@ -45,6 +47,12 @@ all" does — indentation for Python, brackets for Go and PowerShell.
 Every code line is shown; a line that opens a multi-line block shows
 its contents nested underneath it. There are no kind labels and no
 parsing: the outline is the file's lines, nested by their blocks.
+
+Pattern search uses exact tokens and wildcards such as ANY, NUM, and
+STR. Use _ for any identifier, _1 for a repeated identifier, ... to
+skip balanced tokens, NOT to negate an atom, and OR for alternatives.
+For example, "_1 = _1" finds self-assignments and "func _ ( ... )"
+finds function definitions with any parameters.
 
 Output (text):
   [L:4]  package sample
@@ -80,6 +88,7 @@ func run(args []string) int {
 	formatFlag := fs.String("format", "text", "output format: text|json")
 	langFlag := fs.String("lang", "auto", "language name or auto")
 	askFlag := fs.String("ask", "", "rank matching outline lines")
+	patternFlag := fs.String("pattern", "", "find structural token-pattern matches")
 	topFlag := fs.Int("top", 5, "maximum results for --ask")
 	defOnlyFlag := fs.Bool("def-only", false, "only definitions for --ask")
 	perFileFlag := fs.Bool("per-file", false, "best match per file for --ask")
@@ -101,6 +110,28 @@ func run(args []string) int {
 		return 2
 	}
 	paths := fs.Args()
+	var patternSet, askSet bool
+	fs.Visit(func(f *flag.Flag) {
+		switch f.Name {
+		case "pattern":
+			patternSet = true
+		case "ask":
+			askSet = true
+		}
+	})
+	var atoms []atom
+	if patternSet {
+		if askSet {
+			fmt.Fprintln(os.Stderr, "codecore: --pattern and --ask are mutually exclusive")
+			return 2
+		}
+		var err error
+		atoms, err = parsePattern(strings.TrimSpace(*patternFlag))
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "codecore: --pattern: %v\n", err)
+			return 2
+		}
+	}
 	var terms []string
 	if *askFlag != "" {
 		if *topFlag < 1 {
@@ -150,6 +181,14 @@ func run(args []string) int {
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "codecore: "+err.Error())
 		return 1
+	}
+
+	if patternSet {
+		if err := runPattern(files, *formatFlag, *patternFlag, atoms); err != nil {
+			fmt.Fprintf(os.Stderr, "codecore: %v\n", err)
+			return 1
+		}
+		return 0
 	}
 
 	outlines := make([]*Outline, 0, len(files))
@@ -210,6 +249,46 @@ func run(args []string) int {
 		return 1
 	}
 	return 0
+}
+
+func runPattern(files []string, format, pat string, atoms []atom) error {
+	const maxMatches = 1000
+	results := make([]patternResult, 0)
+search:
+	for _, file := range files {
+		src, err := os.ReadFile(file)
+		if err != nil {
+			return err
+		}
+		for result := range patternMatches(file, src, atoms, tokenizeCode(src)) {
+			if len(results) == maxMatches {
+				fmt.Fprintln(os.Stderr, "codecore: --pattern found more than 1000 matches; showing the first 1000")
+				break search
+			}
+			results = append(results, result)
+		}
+	}
+
+	if format == "json" {
+		enc := json.NewEncoder(os.Stdout)
+		enc.SetIndent("", "  ")
+		return enc.Encode(results)
+	}
+	if len(results) == 0 {
+		_, err := fmt.Fprintf(os.Stdout, "no matches for pattern %q\n", pat)
+		return err
+	}
+	for _, result := range results {
+		lineRange := fmt.Sprint(result.Line)
+		if result.End != result.Line {
+			lineRange = fmt.Sprintf("%d-%d", result.Line, result.End)
+		}
+		lineText := strings.ReplaceAll(result.Text, "\n", `\n`)
+		if _, err := fmt.Fprintf(os.Stdout, "  %s [L:%s] %s\n", result.File, lineRange, lineText); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 // skipDirs are the directories a recursive walk never descends into:
