@@ -120,12 +120,20 @@ with `--ask` to return definitions only, filtering out calls and
 uses of the same name. Use `--per-file` with `--ask` to return only
 the best match from each file, so one file cannot fill the whole
 top-N list and hide other files — for a repo-wide "which files
-implement X" question, `--per-file` is the right mode. A definition
-is recognised by its leading keyword (`def`, `func`, `class`, …)
-or by a single `=` assignment, including Lisp forms (`(defn foo`,
-whose kebab-case name keeps its hyphens). Synonyms can still
-miss relevant lines. Search covers the text retained by the outline,
-including its line length cap.
+implement X" question, `--per-file` is the right mode. Use `--word`
+with `--ask` for whole-word matching only: it turns off prefix
+matching, so `read` does not match `reader`. Use `--no-tests` to
+exclude test files (`test_*.py`, `*_test.go`, `*.spec.js`, `tests/`
+directories, and so on) from a directory walk or a direct file, so
+a repo-wide `--ask` does not rank test code above the
+implementation it calls. Use `--filename-only` with `--ask` to
+print just the names of files with matches, and `--count` to print
+the number of matching outline lines per file (before any `--top`
+cut). A definition is recognised by its leading keyword (`def`,
+`func`, `class`, …) or by a single `=` assignment, including Lisp
+forms (`(defn foo`, whose kebab-case name keeps its hyphens).
+Synonyms can still miss relevant lines. Search covers the text
+retained by the outline, including its line length cap.
 
 ### How to ask
 

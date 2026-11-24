@@ -562,3 +562,75 @@ they are now included as text files, so the expected list grew.
 gofmt/vet/test/race all pass; fixtures and pp.ps1 unchanged
 (34/42/28/1494). Tested locally by Hana only, not on the agent
 yet, per Jo's instruction.
+
+## 13. cgrep borrowings: --no-tests, --word, --filename-only, --count (2026-11-24)
+
+Jo: "Check the tool called cgrep on GitHub and see if we can
+borrow anything to our tool" (https://github.com/awgn/cgrep).
+cgrep is a context-aware grep for source code (Haskell, v10, 743
+stars, GPL-2.0): it tokenizes code per language and searches within
+a context — code only, comments only, or strings only — because
+plain grep returns 66% false positives from comments and strings.
+It also has token filters (--identifier, --type, --keyword), word /
+prefix / suffix matching, fuzzy edit-distance search, semantic
+patterns (-S: `_1 = _1` finds self-assignments, `TYP _ ( ... )`
+finds definitions), test filtering (--no-tests / --tests-only
+across 30 languages), and file type/kind filters. Hana's report
+ranked the borrowable ideas: three quick wins (below), two medium
+ones (comment search, a real --lang filter for directory searches),
+one big direction question (semantic patterns — a token-pattern
+engine, ~500+ lines, changes codecore's identity), and two not
+recommended (fuzzy matching would add false positives; multi-
+threading/mmap is unnecessary at ~20µs/file). Jo: "Let's do the
+small fix first" — build the three quick wins. License note: cgrep
+is GPL-2.0, but these are ideas implemented from scratch in Go
+(cgrep is Haskell, so no code transfers).
+
+- **--no-tests.** `isTestFile` in `main.go` (path heuristic only,
+  it does not read the file): a file under a `test`, `tests`,
+  `__tests__`, `spec`, or `specs` directory, or named `test_*`,
+  `*_test`, `*_spec`, `*.spec.*`, `*.test.*`, or `conftest.py`.
+  `collectFiles` gains a `noTests` parameter and skips test files —
+  whether from a walk or a direct path — so a repo-wide --ask does
+  not rank test code above the implementation it calls. Measured:
+  `--ask "sort" --count` on the codecore directory lists
+  `retrieve_test.go` with 31 matches; with `--no-tests` it is gone
+  (the top counts are REVIEW.md 39, merge_sort.rs 38, main.m 36).
+  One edge case noted: a documentation line that merely mentions a
+  test file name (REVIEW.md L:167 mentions `retrieve_test.go`) is
+  not a test file and is kept — correct, since the filter is on the
+  path, not the content.
+- **--word.** `prefixMatches` gains a `wordOnly` flag: no prefix
+  expansion at all, so "read" does not match "reader" and "auth"
+  does not match "authenticate". The substring bonus becomes
+  whole-word only too (new `containsWord` helper), so a line
+  containing only "reader" does not earn the bonus for "read" —
+  without that, the bonus alone would make it a match and defeat
+  the flag. Measured on pp.ps1: `--ask "read" --word` returns only
+  lines with the word "read" (e.g. "Failed to read or parse CSV
+  file"); without it, "reading" lines rank first.
+- **--filename-only / --count.** Two new output modes for --ask
+  (mutually exclusive, both need --ask). `--filename-only` prints
+  each matching file once, in rank order (the file with the best
+  match first); `--count` prints the number of matching outline
+  lines per file, most first, counted before any --top cut (a file
+  with many matches shows its full count, not just the ones that
+  made the top N). Both support --format json (an array of file
+  names, or an array of {file, count}). Implementation: `retrieve`
+  is split into `allMatches` (walk + score + sort, no per-file /
+  top / rank) plus `retrieve` (per-file dedup + top cut + ranks)
+  and `countMatches` (aggregates allMatches by file). Measured:
+  `--ask "heapsort" --filename-only` on testdb lists 7 files;
+  `--ask "heapsort" --count` shows CHECKLIST.md 2, the
+  implementation files 1 each.
+
+Tests: `TestRetrieveWordOnly`, `TestCountMatches`,
+`TestFormatFileNames`, `TestFormatCounts`, `TestIsTestFile`,
+`TestCollectFilesNoTests`. All existing `retrieve(...)` call sites
+gain the `wordOnly` argument (false) and all `collectFiles(...)`
+call sites gain the `noTests` argument (false). gofmt/vet/test/
+race all pass; fixtures and pp.ps1 unchanged (34/42/28/1494).
+Tested locally by Hana only, not on the agent yet, per Jo's
+instruction. The medium and big cgrep ideas (comment search,
+--lang filter, semantic patterns) are NOT built — they are
+separate decisions.

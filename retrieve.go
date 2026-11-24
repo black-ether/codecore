@@ -74,10 +74,12 @@ func filterQueryTerms(terms []string) []string {
 // or any longer term it prefixes, mapping each document to the
 // strongest frequency among its matched terms. A query term of fewer
 // than 3 letters matches exactly only, so a one-letter query cannot
-// match everything starting with that letter. The document frequency
-// is the union over the matched terms, and a document is credited once
-// for its strongest match, not once per matched word.
-func prefixMatches(postings map[string][]termOccurrence, query string) map[int]float64 {
+// match everything starting with that letter. With wordOnly (the
+// --word flag) there is no prefix expansion at all: the term must
+// match a whole token, so "read" does not match "reader". The document
+// frequency is the union over the matched terms, and a document is
+// credited once for its strongest match, not once per matched word.
+func prefixMatches(postings map[string][]termOccurrence, query string, wordOnly bool) map[int]float64 {
 	result := make(map[int]float64)
 	put := func(occurrences []termOccurrence) {
 		for _, m := range occurrences {
@@ -87,7 +89,7 @@ func prefixMatches(postings map[string][]termOccurrence, query string) map[int]f
 		}
 	}
 	put(postings[query])
-	if len(query) < 3 {
+	if wordOnly || len(query) < 3 {
 		return result
 	}
 	for term, occurrences := range postings {
@@ -96,6 +98,19 @@ func prefixMatches(postings map[string][]termOccurrence, query string) map[int]f
 		}
 	}
 	return result
+}
+
+// containsWord reports whether term appears as a whole word (a token,
+// not part of a longer token) in text. Used for the substring bonus in
+// --word mode, where a prefix match must not earn the bonus: "read"
+// must not boost a line that only contains "reader".
+func containsWord(text, term string) bool {
+	for _, token := range tokenize(text) {
+		if token == term {
+			return true
+		}
+	}
+	return false
 }
 
 type retrievalDocument struct {
@@ -287,7 +302,13 @@ type termOccurrence struct {
 	frequency int
 }
 
-func retrieve(outlines []*Outline, terms []string, top int, defOnly bool, perFile bool) []retrievalResult {
+// allMatches scores every outline node against the query terms and
+// returns all matches (score > 0), sorted by score desc, then file,
+// then line. It does not apply --per-file, --top, or ranks —
+// retrieve() does that, and countMatches() aggregates it. The
+// wordOnly flag (--word) turns off prefix matching and makes the
+// substring bonus whole-word only, so "read" does not match "reader".
+func allMatches(outlines []*Outline, terms []string, defOnly bool, wordOnly bool) []retrievalResult {
 	var documents []retrievalDocument
 	postings := make(map[string][]termOccurrence)
 	totalLength := 0
@@ -338,7 +359,9 @@ func retrieve(outlines []*Outline, terms []string, top int, defOnly bool, perFil
 	// substring) in the node's line, so an exact identifier like
 	// Write-Warning outranks a line that merely contains the word
 	// "warning". Applied once per term per document, on top of BM25,
-	// whether or not the term matched as a token.
+	// whether or not the term matched as a token. In --word mode the
+	// bonus is whole-word only, so a line containing only "reader"
+	// does not earn it for "read".
 	const substringBonus = 3.0
 	n := float64(len(documents))
 	avgdl := float64(totalLength) / n
@@ -346,9 +369,9 @@ func retrieve(outlines []*Outline, terms []string, top int, defOnly bool, perFil
 	// Add scores in query order to keep floating-point sums deterministic.
 	// A query term matches the exact term and, when it is at least 3
 	// letters, any longer term it prefixes, so "auth" finds
-	// "authenticate".
+	// "authenticate" — unless --word is on.
 	for _, term := range terms {
-		matched := prefixMatches(postings, term)
+		matched := prefixMatches(postings, term, wordOnly)
 		if len(matched) > 0 {
 			df := float64(len(matched))
 			idf := math.Log(1 + (n-df+0.5)/(df+0.5))
@@ -361,7 +384,14 @@ func retrieve(outlines []*Outline, terms []string, top int, defOnly bool, perFil
 			// Terms under 3 letters are skipped for the substring bonus:
 			// a 2-letter substring appears inside too many words to mean
 			// anything (e.g. "au" inside "authenticate").
-			if len(term) >= 3 && strings.Contains(doc.lowerText, term) {
+			if len(term) < 3 {
+				continue
+			}
+			if wordOnly {
+				if containsWord(doc.lowerText, term) {
+					scores[i] += substringBonus
+				}
+			} else if strings.Contains(doc.lowerText, term) {
 				scores[i] += substringBonus
 			}
 		}
@@ -387,6 +417,14 @@ func retrieve(outlines []*Outline, terms []string, top int, defOnly bool, perFil
 		}
 		return a.Line < b.Line
 	})
+	return results
+}
+
+// retrieve returns the top-ranked matches for a query: allMatches,
+// then the --per-file dedup (best result per file only), then the
+// --top cut, then ranks.
+func retrieve(outlines []*Outline, terms []string, top int, defOnly bool, perFile bool, wordOnly bool) []retrievalResult {
+	results := allMatches(outlines, terms, defOnly, wordOnly)
 	// Per-file mode keeps only the best result from each file, so one
 	// file cannot fill the whole top-N list and push other files out
 	// (in a repo-wide search the Go file took 4 of the top 10 slots,
@@ -413,6 +451,91 @@ func retrieve(outlines []*Outline, terms []string, top int, defOnly bool, perFil
 	return results
 }
 
+// fileCount is one file's match count for --count.
+type fileCount struct {
+	File  string `json:"file"`
+	Count int    `json:"count"`
+}
+
+// countMatches returns, for each file, how many outline nodes match
+// the query (score > 0), before any --top cut. A file with many
+// matches shows its full count, not just the ones that made the top
+// N. Sorted by count desc, then file.
+func countMatches(outlines []*Outline, terms []string, defOnly bool, wordOnly bool) []fileCount {
+	counts := make(map[string]int)
+	for _, r := range allMatches(outlines, terms, defOnly, wordOnly) {
+		counts[r.File]++
+	}
+	result := make([]fileCount, 0, len(counts))
+	for file, count := range counts {
+		result = append(result, fileCount{file, count})
+	}
+	sort.Slice(result, func(i, j int) bool {
+		if result[i].Count != result[j].Count {
+			return result[i].Count > result[j].Count
+		}
+		return result[i].File < result[j].File
+	})
+	return result
+}
+
+// formatFileNames prints the files that have matches, one per line,
+// deduplicated in rank order (so the first file listed is the one
+// with the best match). In JSON mode it emits an array of file names.
+func formatFileNames(w io.Writer, format, query string, results []retrievalResult) error {
+	seen := make(map[string]bool)
+	var files []string
+	for _, r := range results {
+		if !seen[r.File] {
+			seen[r.File] = true
+			files = append(files, r.File)
+		}
+	}
+	if format == "json" {
+		if files == nil {
+			files = []string{}
+		}
+		return json.NewEncoder(w).Encode(files)
+	}
+	if len(files) == 0 {
+		_, err := fmt.Fprintf(w, "no matches for %q\n", query)
+		return err
+	}
+	for _, f := range files {
+		if _, err := fmt.Fprintln(w, f); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// formatCounts prints the number of matching outline nodes per file,
+// most matches first. In JSON mode it emits an array of
+// {file, count} objects.
+func formatCounts(w io.Writer, format, query string, counts []fileCount) error {
+	if format == "json" {
+		if counts == nil {
+			counts = []fileCount{}
+		}
+		enc := json.NewEncoder(w)
+		enc.SetIndent("", "  ")
+		return enc.Encode(counts)
+	}
+	if len(counts) == 0 {
+		_, err := fmt.Fprintf(w, "no matches for %q\n", query)
+		return err
+	}
+	for _, c := range counts {
+		if _, err := fmt.Fprintf(w, "  %d %s\n", c.Count, c.File); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// formatResults prints ranked --ask results: one entry per result with
+// its file, line range, text, and score. In JSON mode it emits the
+// result array.
 func formatResults(w io.Writer, format, query string, results []retrievalResult) error {
 	if format == "json" {
 		enc := json.NewEncoder(w)

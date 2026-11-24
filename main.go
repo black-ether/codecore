@@ -28,6 +28,14 @@ Flags:
   --top N              maximum results for --ask (default 5)
   --def-only           with --ask, return definitions only
   --per-file           with --ask, return the best match per file only
+  --word               with --ask, match whole words only (no prefix
+                       matching, so "read" does not match "reader")
+  --no-tests           exclude test files (test_*.py, *_test.go,
+                       *.spec.js, tests/ directories, and so on)
+  --filename-only      with --ask, print only the names of files
+                       with matches
+  --count              with --ask, print the number of matching
+                       outline lines per file
   -h, --help           show this help
 
 With no arguments, this help is shown. Flags come before paths.
@@ -75,6 +83,10 @@ func run(args []string) int {
 	topFlag := fs.Int("top", 5, "maximum results for --ask")
 	defOnlyFlag := fs.Bool("def-only", false, "only definitions for --ask")
 	perFileFlag := fs.Bool("per-file", false, "best match per file for --ask")
+	wordFlag := fs.Bool("word", false, "whole-word only for --ask (no prefix matching)")
+	noTestsFlag := fs.Bool("no-tests", false, "exclude test files")
+	filenameOnlyFlag := fs.Bool("filename-only", false, "with --ask, print only matching file names")
+	countFlag := fs.Bool("count", false, "with --ask, print match counts per file")
 	// -1 means "not specified": the language's default depth is used
 	// (0 for most languages, 2 for HTML/XML). An explicit --depth 0
 	// still shows only the top level.
@@ -105,6 +117,18 @@ func run(args []string) int {
 		fmt.Print(helpText())
 		return 0
 	}
+	if *wordFlag && *askFlag == "" {
+		fmt.Fprintln(os.Stderr, "codecore: --word needs --ask")
+		return 2
+	}
+	if *filenameOnlyFlag && *countFlag {
+		fmt.Fprintln(os.Stderr, "codecore: --filename-only and --count are mutually exclusive")
+		return 2
+	}
+	if (*filenameOnlyFlag || *countFlag) && *askFlag == "" {
+		fmt.Fprintln(os.Stderr, "codecore: --filename-only and --count need --ask")
+		return 2
+	}
 	if *askFlag == "" && *depthFlag < -1 {
 		fmt.Fprintln(os.Stderr, "codecore: --depth must be 0 or more")
 		return 2
@@ -122,7 +146,7 @@ func run(args []string) int {
 		return 2
 	}
 
-	files, err := collectFiles(paths)
+	files, err := collectFiles(paths, *noTestsFlag)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "codecore: "+err.Error())
 		return 1
@@ -169,8 +193,15 @@ func run(args []string) int {
 	}
 
 	if *askFlag != "" {
-		results := retrieve(outlines, terms, *topFlag, *defOnlyFlag, *perFileFlag)
-		err = formatResults(os.Stdout, *formatFlag, *askFlag, results)
+		if *countFlag {
+			err = formatCounts(os.Stdout, *formatFlag, *askFlag, countMatches(outlines, terms, *defOnlyFlag, *wordFlag))
+		} else if *filenameOnlyFlag {
+			results := retrieve(outlines, terms, *topFlag, *defOnlyFlag, *perFileFlag, *wordFlag)
+			err = formatFileNames(os.Stdout, *formatFlag, *askFlag, results)
+		} else {
+			results := retrieve(outlines, terms, *topFlag, *defOnlyFlag, *perFileFlag, *wordFlag)
+			err = formatResults(os.Stdout, *formatFlag, *askFlag, results)
+		}
 	} else {
 		err = fmtr.Format(os.Stdout, outlines)
 	}
@@ -190,6 +221,40 @@ var skipDirs = map[string]bool{
 	"target": true, "dist": true, "build": true,
 }
 
+// testDirs are the directory names that mark a whole subtree as test
+// code: tests/, test/, __tests__/, spec/, specs/.
+var testDirs = map[string]bool{
+	"test": true, "tests": true, "__tests__": true,
+	"spec": true, "specs": true,
+}
+
+// isTestFile reports whether a path is a test file, by the file-layout
+// conventions cgrep's --no-tests uses (test_*.py, *_test.go,
+// *.spec.js, tests/ directories, conftest.py, and so on). This is a
+// path heuristic only — it does not read the file — so a helper named
+// test_utils.go is treated as a test file too. --no-tests is opt-in,
+// so the user chooses to apply it.
+func isTestFile(path string) bool {
+	// A file under a test directory is a test file.
+	for _, part := range strings.Split(filepath.ToSlash(path), "/") {
+		if testDirs[part] {
+			return true
+		}
+	}
+	base := filepath.Base(path)
+	name := strings.TrimSuffix(base, filepath.Ext(base))
+	if strings.HasPrefix(name, "test_") || strings.HasPrefix(name, "test-") {
+		return true
+	}
+	if strings.HasSuffix(name, "_test") || strings.HasSuffix(name, "-test") {
+		return true
+	}
+	if strings.HasSuffix(name, "_spec") || strings.HasSuffix(name, ".spec") || strings.HasSuffix(name, ".test") {
+		return true
+	}
+	return name == "conftest"
+}
+
 // collectFiles expands paths: a file is kept as-is, a directory expands
 // recursively to its files with a registered extractor extension
 // (sorted by path). Directories in skipDirs are never descended into,
@@ -197,11 +262,17 @@ var skipDirs = map[string]bool{
 // repo holds many non-code files, and erroring on each would be noise.
 // A file passed directly is kept even without a registered extension;
 // the extractor reports it when the file is read. The root directory
-// itself is never skipped, even when its name is in skipDirs.
-func collectFiles(paths []string) ([]string, error) {
+// itself is never skipped, even when its name is in skipDirs. With
+// noTests, test files (isTestFile) are skipped — whether they come
+// from a walk or a direct path — so a repo-wide --ask does not rank
+// test code above the implementation it calls.
+func collectFiles(paths []string, noTests bool) ([]string, error) {
 	var files []string
 	seen := make(map[string]bool)
 	add := func(p string) {
+		if noTests && isTestFile(p) {
+			return
+		}
 		if !seen[p] {
 			seen[p] = true
 			files = append(files, p)
