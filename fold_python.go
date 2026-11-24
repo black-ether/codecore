@@ -21,12 +21,28 @@ func parsePython(lines []string) []*Node {
 	}
 	var code []codeLine
 	inTriple := ""
+	inDocstring := false
+	var curDoc *commentBlock
+	var docstrings []commentBlock
 	blockDepth := 0
 	inHTMLComment := false
 	for i, line := range lines {
 		if inTriple != "" {
+			if inDocstring && curDoc != nil {
+				if t := docstringText(line, inTriple); t != "" {
+					curDoc.text += " " + t
+				}
+				curDoc.end = i + 1
+			}
 			if strings.Contains(line, inTriple) {
 				inTriple = ""
+				if inDocstring {
+					if curDoc != nil {
+						docstrings = append(docstrings, *curDoc)
+						curDoc = nil
+					}
+					inDocstring = false
+				}
 			}
 			continue
 		}
@@ -143,7 +159,21 @@ func parsePython(lines []string) []*Node {
 		}
 		if isDocstringLine(stripped, prevText) {
 			if opened != "" {
+				// Multi-line docstring opens here: record it and
+				// track its content lines (the inTriple block
+				// above) until the closing quotes.
 				inTriple = opened
+				inDocstring = true
+				curDoc = &commentBlock{start: i + 1, end: i + 1, text: docstringText(stripped, opened)}
+			} else {
+				// Single-line docstring: opens and closes here.
+				quote := `"""`
+				if !strings.Contains(stripped, quote) {
+					quote = `'''`
+				}
+				if t := docstringText(stripped, quote); t != "" {
+					docstrings = append(docstrings, commentBlock{start: i + 1, end: i + 1, text: t})
+				}
 			}
 			continue
 		}
@@ -197,7 +227,61 @@ func parsePython(lines []string) []*Node {
 			stack = append(stack, frame{indent: e.indent, kids: &node.Children})
 		}
 	}
+	// Attach docstrings to the node they document: the most recent
+	// code line before the docstring starts (the def/class above
+	// it), or the first node for a module docstring. Docstrings come
+	// after the node they describe, unlike comments, so they attach
+	// to the previous node, not the next. The text lands in
+	// node.Comments, the same field comments use, so retrieval
+	// indexes it with no further change.
+	if len(docstrings) > 0 && len(root) > 0 {
+		var flat []*Node
+		var walk func(nodes []*Node)
+		walk = func(nodes []*Node) {
+			for _, n := range nodes {
+				flat = append(flat, n)
+				walk(n.Children)
+			}
+		}
+		walk(root)
+		for _, d := range docstrings {
+			text := strings.TrimSpace(d.text)
+			if text == "" {
+				continue
+			}
+			target := flat[0]
+			for _, n := range flat {
+				if n.Line < d.start {
+					target = n
+				} else {
+					break
+				}
+			}
+			target.Comments = append(target.Comments, text)
+		}
+	}
 	return root
+}
+
+// docstringText returns the searchable text of a docstring line: the
+// line with an r/b/f/u prefix and the triple quotes removed,
+// trimmed. Interior lines (no quotes) just get trimmed. The prefix
+// is only stripped when it precedes the quote, so an interior line
+// starting with "r" (like "return ...") is not mangled.
+func docstringText(line, quote string) string {
+	s := strings.TrimSpace(line)
+	if !strings.Contains(s, quote) {
+		return s
+	}
+	t := s
+	for len(t) > 0 && strings.ContainsRune("rRbBfFuU", rune(t[0])) {
+		t = t[1:]
+	}
+	if strings.HasPrefix(t, quote) {
+		s = t
+	}
+	s = strings.ReplaceAll(s, quote, "")
+	return strings.TrimSpace(s)
 }
 
 // isPreprocessorLine reports whether a line is a C-style

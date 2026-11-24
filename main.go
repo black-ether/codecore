@@ -234,6 +234,10 @@ func run(args []string) int {
 			fmt.Fprintf(os.Stderr, "codecore: %v\n", err)
 			return 1
 		}
+		// Attach the standalone comments above each node, so --ask
+		// finds code from the comment's words. The formatters
+		// ignore Comments, so the fold output is unchanged.
+		attachComments(o, src)
 		if o.Unbalanced {
 			fmt.Fprintf(os.Stderr, "codecore: %s: unbalanced brackets; outline may be incomplete\n", f)
 		}

@@ -328,6 +328,23 @@ func TestRetrieveSubstringBonus(t *testing.T) {
 	}
 }
 
+// A word that only appears in a node's attached comments still
+// finds the node: the comments describe the code, so the code is
+// the result.
+func TestRetrieveCommentText(t *testing.T) {
+	outlines := []*Outline{{File: "check.go", Nodes: []*Node{
+		{Line: 1, Text: "func CheckConfig() {}", Comments: []string{"Check for Configuration File"}},
+		{Line: 2, Text: "func Other() {}"},
+	}}}
+	got := retrieve(outlines, tokenize("configuration"), 5, false, false, false)
+	if len(got) != 1 {
+		t.Fatalf("got %+v, want 1 result", got)
+	}
+	if !strings.Contains(got[0].Text, "CheckConfig") {
+		t.Errorf("result = %+v, want the CheckConfig function", got[0])
+	}
+}
+
 // The substring bonus is whole-word only: a term that is merely a
 // prefix or substring of a longer word ("auth" in "author") must not
 // earn it, or author lines outrank the genuinely relevant

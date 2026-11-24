@@ -33,10 +33,15 @@ import (
 // source order. A node with children is a block header — a line whose
 // block stays open past the end of the line. A node without children is
 // a leaf: a plain line, or a block that opens and closes on one line.
+// Comments holds the standalone comment blocks attached to this node
+// (the comments directly above it, describing it). It is retrieval-only:
+// the outline formatters ignore it, so the fold output is unchanged.
+// Excluded from JSON.
 type Node struct {
-	Line     int     `json:"line"`
-	Text     string  `json:"text"`
-	Children []*Node `json:"children,omitempty"`
+	Line     int      `json:"line"`
+	Text     string   `json:"text"`
+	Children []*Node  `json:"children,omitempty"`
+	Comments []string `json:"-"`
 }
 
 // Outline is the extraction result for one file. Unbalanced is set when

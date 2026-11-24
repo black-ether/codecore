@@ -816,3 +816,95 @@ author line above the longer Authenticode line; the test now asserts
 only what the bonus guarantees). The existing Write-Warning test
 still passes. gofmt/vet/test/race pass; fixtures unchanged
 34/42/28/1494. NOT PUSHED (same unpushed batch as §16).
+
+## 18. Comment support for --ask (2026-11-24)
+
+Jo: "Yes take your time building it" — the design from the 13:24
+discussion, built alone in codecore (no codegos merge).
+
+A comment describes the code below it, so --ask should find that
+code from the comment's words. Trailing comments were already
+indexed (a node's Text is the full line); the gap was standalone
+comment blocks. New `comments.go`: a per-language comment table
+(33 languages; ~10 distinct styles), `extractComments` (scan raw
+lines, return blocks), `attachComments` (attach each block to the
+next node in source order). It runs as one post-processing step
+after `Extract` in main.go, where the raw bytes live; the
+extractors stay pure and unchanged. `Node` gains a `Comments`
+field (`json:"-"`, retrieval-only), so the fold output is
+unchanged. Retrieval indexes `node.Text + comments` at equal weight
+(BM25 length normalisation handles a long comment) and the
+whole-word substring bonus applies to comment words too.
+
+Rules that keep it correct: a comment is standalone only when its
+marker is the first non-whitespace on the line (a marker after code
+is already in that line's node); block openers are checked before
+line markers (`--[[`, `#=`, `<#` all start with a line marker); a
+line that opens a block comment and has code after the closer is a
+code line, not a comment. The table is per-language, not
+per-parser: the indent parser treats any comment-looking marker as
+a comment for folding, but extraction must not call `#` a comment
+in C (preprocessor) or `%` one in Ruby (string literal). Strings
+are not tracked — a marker at line start is a comment — so a
+multi-line string whose content line starts with a marker is a rare
+false positive; nested block comments end at the first closer (SQL
+only).
+
+Verified live: on pp.ps1, `--ask "config file"` now returns
+L:111-112 (`$configFilePath = if (Test-Path $scriptConfPath) {`)
+at #3 (10.83), found via the L:110 comment — the old binary's top 3
+were all lines with "config file" in the code itself and the check
+code was absent. A Go doc comment (`// Serve starts the HTTP
+server.`) makes `Serve` findable by "http server" (7.13); a Python
+`# sort the list in place` makes `sort_items` findable by "sort
+list". The fold view still hides comments.
+
+Tests: TestExtractCommentsGo/Python/PowerShell/HTML/UnknownLanguage,
+TestAttachComments, TestCommentFindable, TestRetrieveCommentText.
+gofmt/vet/test/race pass; fixtures unchanged 34/42/28/1494. Go
+1.27.4 had been wiped by a VM restart mid-build and was reinstalled
+from the verified tarball (sha256 OK) before testing. NOT PUSHED —
+Jo said build, not push. Follow-up, not built: Python docstrings
+(they are strings, not comments; the indent parser already
+identifies them, so attaching them to their function node the same
+way is a small second step).
+
+## 19. Python docstrings attach like comments (2026-11-24)
+
+Jo: "Fix the docstring, test, push if no issues or report back to
+me" — the follow-up left open in §18.
+
+A Python docstring is a string, not a comment, so the comment
+table (§18) cannot see it. But the indent parser already
+identifies docstrings (`isDocstringLine`, plus `inTriple` tracking
+for multi-line ones) and skips them. This build records them
+instead of discarding them: the first pass in fold_python.go now
+captures each docstring's text (quotes and r/b/f/u prefix stripped)
+and line range, and after the tree is built each docstring attaches
+to the node it documents — the most recent code line before it
+starts (the def/class above it), or the first node for a module
+docstring. The text lands in the same `node.Comments` field
+comments use, so retrieval indexes it with no further change. The
+fold output still hides docstrings.
+
+The attachment rule is the mirror of comments: a comment comes
+before the code it describes (attach to the next node), a
+docstring comes after the def it describes (attach to the previous
+node). Doing it in the parser, rather than in the generic comment
+scanner, is deliberate: the parser already knows a docstring from
+a string argument (the previous-line rule in `isDocstringLine`),
+and reimplementing that in the scanner would duplicate logic and
+drift. Single-line and multi-line docstrings both work.
+
+Verified live: `--ask "merge sort algorithm"` finds `merge_sort`
+(12.37) above `bubble_sort` (4.09), the docstring-only words
+deciding it; `--ask "defaults missing"` finds `configure` from a
+multi-line docstring (7.01). The fold view still hides docstrings.
+
+Tests: TestDocstringAttached (function + module docstring),
+TestDocstringSingleLine, TestDocstringFindable. gofmt/vet/test/race
+pass; fixtures unchanged 34/42/28/1494. Known limitation, not
+fixed: a docstring whose content includes a line starting with `#`
+is also picked up by the comment scanner as a comment block (the
+generic scanner does not track docstring state), so those words
+are indexed twice for nearby nodes — harmless, but noted.

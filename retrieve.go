@@ -369,7 +369,18 @@ func allMatches(outlines []*Outline, terms []string, defOnly bool, wordOnly bool
 	var walk func(string, []*Node, []string)
 	walk = func(file string, nodes []*Node, parents []string) {
 		for _, node := range nodes {
-			tokens := tokenize(node.Text)
+			// The searchable text is the node's line plus the
+			// comments attached to it, so a word that only appears
+			// in a comment still finds the code the comment
+			// describes. The name still comes from the code line
+			// alone, not the comments. The document length grows
+			// with the comments, so BM25 normalises a long comment
+			// instead of letting it dominate.
+			searchText := node.Text
+			if len(node.Comments) > 0 {
+				searchText += " " + strings.Join(node.Comments, " ")
+			}
+			tokens := tokenize(searchText)
 			name, isDef := extractName(node.Text)
 			// Only a definition's name is boosted, so a definition
 			// ranks above a mere use of the same name. The boost
@@ -382,7 +393,7 @@ func allMatches(outlines []*Outline, terms []string, defOnly bool, wordOnly bool
 			}
 			length := len(tokens)
 			id := len(documents)
-			documents = append(documents, retrievalDocument{file, node, length, parents, endLine(node), name, isDef, strings.ToLower(node.Text)})
+			documents = append(documents, retrievalDocument{file, node, length, parents, endLine(node), name, isDef, strings.ToLower(searchText)})
 			totalLength += length
 			frequencies := make(map[string]int)
 			for _, token := range tokens {

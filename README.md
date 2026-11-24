@@ -122,7 +122,13 @@ like `Write-Warning` outranks a line that merely contains the word
 "warning". The bonus is whole-word only: a term that is merely a
 prefix or substring of a longer word ("auth" inside "author") does
 not earn it, or author lines would outrank the genuinely relevant
-"Authenticode" line. Use `--def-only` with `--ask` to return
+"Authenticode" line. Comments are searchable too: a standalone
+comment block above a node is attached to that node, so its words
+help find the code it describes (a `# Check for Configuration
+File` comment makes the `$configFilePath = ...` line below it
+findable by "config file"). Python docstrings work the same way,
+attached to the def/class above them. The result is the code, not
+the comment or docstring. Use `--def-only` with `--ask` to return
 definitions only, filtering out calls and assignments; a Go method
 with a receiver (`func (h *MaxHeap) Init(...)`) is named "Init" and
 counts as a definition.
