@@ -260,7 +260,11 @@ search:
 		if err != nil {
 			return err
 		}
-		for result := range patternMatches(file, src, atoms, tokenizeCode(src)) {
+		lang := ""
+		if ext, ok := ExtractorFor(file); ok {
+			lang = ext.Language()
+		}
+		for result := range patternMatches(file, src, atoms, tokenizeCode(src, lang)) {
 			if len(results) == maxMatches {
 				fmt.Fprintln(os.Stderr, "codecore: --pattern found more than 1000 matches; showing the first 1000")
 				break search

@@ -1,6 +1,10 @@
 package main
 
 import (
+	"encoding/json"
+	"maps"
+	"os"
+	"path/filepath"
 	"slices"
 	"strings"
 	"testing"
@@ -20,7 +24,7 @@ func TestTokenizeCodePreprocessor(t *testing.T) {
 		{tokIdent, "FOO", 2}, {tokNumber, "1", 2},
 		{tokIdent, "x", 4}, {tokOperator, "=", 4}, {tokNumber, "1", 4},
 	}
-	if got := tokenizeCode([]byte(src)); !slices.Equal(got, want) {
+	if got := tokenizeCode([]byte(src), ""); !slices.Equal(got, want) {
 		t.Fatalf("tokens = %#v, want %#v", got, want)
 	}
 }
@@ -39,7 +43,7 @@ func TestTokenizeCode(t *testing.T) {
 		{tokOperator, "=", 7}, {tokIdent, "name", 7},
 		{tokString, "'x'", 7}, {tokNumber, "1e10", 7},
 	}
-	if got := tokenizeCode([]byte(src)); !slices.Equal(got, want) {
+	if got := tokenizeCode([]byte(src), ""); !slices.Equal(got, want) {
 		t.Fatalf("tokens = %#v, want %#v", got, want)
 	}
 }
@@ -127,7 +131,7 @@ func TestMatchAtoms(t *testing.T) {
 		{"'hi'", "hi", false},
 	} {
 		t.Run(tc.pat+"/"+tc.src, func(t *testing.T) {
-			_, ok := matchAtoms(mustParsePattern(t, tc.pat), tokenizeCode([]byte(tc.src)), 0, nil)
+			_, ok := matchAtoms(mustParsePattern(t, tc.pat), tokenizeCode([]byte(tc.src), ""), 0, nil)
 			if ok != tc.ok {
 				t.Fatalf("matched = %v, want %v", ok, tc.ok)
 			}
@@ -155,7 +159,7 @@ func TestMatchEllipsis(t *testing.T) {
 		{"f ... x", "f " + strings.Repeat("a ", 65) + "x", -1},
 	} {
 		t.Run(tc.pat+"/"+tc.src, func(t *testing.T) {
-			end, ok := matchAtoms(mustParsePattern(t, tc.pat), tokenizeCode([]byte(tc.src)), 0, nil)
+			end, ok := matchAtoms(mustParsePattern(t, tc.pat), tokenizeCode([]byte(tc.src), ""), 0, nil)
 			if ok != (tc.end >= 0) || ok && end != tc.end {
 				t.Fatalf("end, matched = %d, %v; want end %d (-1 for failure)", end, ok, tc.end)
 			}
@@ -166,7 +170,7 @@ func TestMatchEllipsis(t *testing.T) {
 func TestFindPatternMatches(t *testing.T) {
 	const file = "sample.txt"
 	src := []byte("  x = x\nx = y\nz =\n  z\n// a = a\n")
-	tokens := tokenizeCode(src)
+	tokens := tokenizeCode(src, "")
 	got := findPatternMatches(file, src, mustParsePattern(t, "_1 = _1"), tokens)
 	want := []patternResult{{file, 1, 1, "  x = x"}, {file, 3, 4, "z =\n  z"}}
 	if !slices.Equal(got, want) {
@@ -178,7 +182,7 @@ func TestFindPatternMatches(t *testing.T) {
 		}
 	}
 	src = []byte("x = x = x")
-	if got := findPatternMatches(file, src, mustParsePattern(t, "_1 = _1"), tokenizeCode(src)); len(got) != 2 {
+	if got := findPatternMatches(file, src, mustParsePattern(t, "_1 = _1"), tokenizeCode(src, "")); len(got) != 2 {
 		t.Errorf("overlapping matches = %#v, want two", got)
 	}
 }
@@ -197,5 +201,144 @@ func TestPatternFlag(t *testing.T) {
 	}
 	if got := run([]string{"--pattern", "missing", "--top", "0", "--per-file", "--def-only", "testdata/sample.go"}); got != 0 {
 		t.Errorf("run with --ask options = %d, want 0", got)
+	}
+}
+
+func TestTokenizeCodeKeywords(t *testing.T) {
+	const goSrc = "func main() { var x int = 0; if x == 0 { return } }"
+	const pythonSrc = "def f(x): if x is None: return True"
+	for _, tc := range []struct {
+		lang, src string
+		want      map[string]tokenKind
+	}{
+		{"GO", goSrc, map[string]tokenKind{
+			"func": tokKeyword, "var": tokKeyword, "if": tokKeyword, "return": tokKeyword,
+			"int": tokNativeType, "main": tokIdent, "x": tokIdent, "0": tokNumber,
+		}},
+		{"", goSrc, map[string]tokenKind{
+			"func": tokIdent, "var": tokIdent, "if": tokIdent, "return": tokIdent,
+			"int": tokIdent, "main": tokIdent, "x": tokIdent, "0": tokNumber,
+		}},
+		{"python", pythonSrc, map[string]tokenKind{
+			"def": tokKeyword, "if": tokKeyword, "is": tokKeyword, "return": tokKeyword,
+			"None": tokKeyword, "True": tokKeyword, "f": tokIdent, "x": tokIdent,
+		}},
+		{"python", "true print int", map[string]tokenKind{
+			"true": tokIdent, "print": tokIdent, "int": tokNativeType,
+		}},
+		{"json", "true null", map[string]tokenKind{"true": tokIdent, "null": tokIdent}},
+		{"unknown", "if int", map[string]tokenKind{"if": tokIdent, "int": tokIdent}},
+	} {
+		got := make(map[string]tokenKind)
+		for _, tok := range tokenizeCode([]byte(tc.src), tc.lang) {
+			if tok.kind != tokOperator && tok.kind != tokBracket {
+				got[tok.text] = tok.kind
+			}
+		}
+		if !maps.Equal(got, tc.want) {
+			t.Errorf("tokenizeCode(%q, %q) word and number kinds = %v, want %v", tc.src, tc.lang, got, tc.want)
+		}
+	}
+}
+
+func TestKeywordTableLanguages(t *testing.T) {
+	for _, lang := range Languages() {
+		if _, ok := keywordTable[lang]; !ok {
+			t.Errorf("missing keyword table entry for %q", lang)
+		}
+	}
+}
+
+func TestMatchKeywordType(t *testing.T) {
+	for _, tc := range []struct {
+		pat, src, lang string
+		want           bool
+	}{
+		{"KEY", "if", "go", true},
+		{"KEY", "x", "go", false},
+		{"KEY", "int", "go", false},
+		{"KEY", "if", "", false},
+		{"TYP", "int", "go", true},
+		{"TYP", "x", "go", false},
+		{"TYP", "if", "go", false},
+		{"TYP", "int", "", false},
+	} {
+		_, got := matchAtoms(mustParsePattern(t, tc.pat), tokenizeCode([]byte(tc.src), tc.lang), 0, nil)
+		if got != tc.want {
+			t.Errorf("pattern %q against %q (%s) matched = %v, want %v", tc.pat, tc.src, tc.lang, got, tc.want)
+		}
+	}
+}
+
+func TestMatchExactCrossKind(t *testing.T) {
+	for _, tc := range []struct {
+		pat, src string
+		want     bool
+	}{
+		{"if", "if", true},
+		{"int", "int", true},
+		{"If", "if", false},
+		{"if", "int", false},
+		{"'if'", "if", false},
+		{"if", "'if'", false},
+		{"_", "if", true},
+		{"_1 _1", "int int", true},
+		{"_1 _1", "int if", false},
+	} {
+		_, got := matchAtoms(mustParsePattern(t, tc.pat), tokenizeCode([]byte(tc.src), "go"), 0, nil)
+		if got != tc.want {
+			t.Errorf("pattern %q against Go source %q matched = %v, want %v", tc.pat, tc.src, got, tc.want)
+		}
+	}
+}
+
+func TestPatternFlagLang(t *testing.T) {
+	const goFile = "testdata/sample.go"
+	dir := t.TempDir()
+	pythonFile := filepath.Join(dir, "source.py")
+	unknownFile := filepath.Join(dir, "source.unknown")
+	for _, file := range []string{pythonFile, unknownFile} {
+		if err := os.WriteFile(file, []byte("def"), 0600); err != nil {
+			t.Fatal(err)
+		}
+	}
+	for _, tc := range []struct {
+		pat       string
+		wantFiles []string
+	}{
+		{"KEY", []string{pythonFile, goFile}},
+		{"TYP", []string{goFile}},
+		{"def", []string{pythonFile, unknownFile}},
+	} {
+		t.Run(tc.pat, func(t *testing.T) {
+			out, err := os.CreateTemp(dir, "stdout")
+			if err != nil {
+				t.Fatal(err)
+			}
+			defer out.Close()
+			stdout := os.Stdout
+			os.Stdout = out
+			defer func() { os.Stdout = stdout }()
+
+			if code := run([]string{"--format", "json", "--pattern", tc.pat, goFile, pythonFile, unknownFile}); code != 0 {
+				t.Fatalf("exit code = %d, want 0", code)
+			}
+			if _, err := out.Seek(0, 0); err != nil {
+				t.Fatal(err)
+			}
+			var matches []patternResult
+			if err := json.NewDecoder(out).Decode(&matches); err != nil {
+				t.Fatal(err)
+			}
+			var files []string
+			for _, match := range matches {
+				if !slices.Contains(files, match.File) {
+					files = append(files, match.File)
+				}
+			}
+			if !slices.Equal(files, tc.wantFiles) {
+				t.Errorf("matched files = %q, want %q", files, tc.wantFiles)
+			}
+		})
 	}
 }

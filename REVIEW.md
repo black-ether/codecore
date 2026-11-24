@@ -674,3 +674,25 @@ $ /tmp/codecore-fold --pattern '_ = NOT STR' /tmp/codecore-pattern-demo.txt
 
 At `--depth 99`, the outline counts were 34 for `sample.py`, 42 for
 `sample.go`, 28 for `sample.ps1`, and 1494 for `pp.ps1`.
+
+## 15. Semantic pattern search, Phase 2 (2026-11-24)
+
+The keyword table covers all 35 extractor languages, with empty sets for
+HTML, XML, YAML, JSON, CSS, and plain text. Each file uses its extractor's
+language to classify words for `KEY` and `TYP`. Table lookups match source
+spelling case-sensitively.
+
+The CLI parses the pattern once without a language so it can reuse the
+same atoms across files. Exact words compare by text across identifiers,
+keywords, and native types. This lets a literal `if` in the pattern match
+a Go keyword token. Placeholders continue to match any word token.
+
+On `testdata/sample.go`, `KEY` returned 29 matches and `TYP` returned 11.
+Each result corresponds to one token, so lines with multiple matching
+tokens appear more than once. The exact `if` search returned zero
+matches on that file because it contains no `if` token. The same
+search returned one match on a Go snippet containing `if ok { return }`.
+
+At `--depth 99`, the fixture outputs matched the baseline byte for byte,
+with 34 nodes for `sample.py`, 42 for `sample.go`, 28 for `sample.ps1`,
+and 1494 for `pp.ps1`.

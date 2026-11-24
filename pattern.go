@@ -14,6 +14,8 @@ type tokenKind int
 
 const (
 	tokIdent tokenKind = iota
+	tokKeyword
+	tokNativeType
 	tokString
 	tokNumber
 	tokOperator
@@ -98,7 +100,8 @@ func quotedLength(s string) int {
 	return len(s)
 }
 
-func tokenizeCode(src []byte) []token {
+func tokenizeCode(src []byte, lang string) []token {
+	words := keywordTable[strings.ToLower(lang)]
 	var tokens []token
 	line := 1
 	srcStr := string(src)
@@ -138,6 +141,14 @@ func tokenizeCode(src []byte) []token {
 					break
 				}
 				end += width
+			}
+			if kind == tokIdent {
+				switch word := s[:end]; {
+				case words.keywords[word]:
+					kind = tokKeyword
+				case words.types[word]:
+					kind = tokNativeType
+				}
 			}
 		case strings.ContainsRune("()[]{}", r):
 			kind = tokBracket
@@ -220,7 +231,7 @@ func baseAtom(t token) atom {
 }
 
 func parsePattern(pat string) ([]atom, error) {
-	tokens := tokenizeCode([]byte(pat))
+	tokens := tokenizeCode([]byte(pat), "")
 	if len(tokens) == 0 {
 		return nil, fmt.Errorf("pattern must contain at least one token")
 	}
@@ -286,13 +297,18 @@ func unquotedPatternString(s string) string {
 	return strings.TrimSpace(s)
 }
 
+func isWordKind(k tokenKind) bool {
+	return k == tokIdent || k == tokKeyword || k == tokNativeType
+}
+
 // matchSingleAtom shares bindings until a new name needs to be bound.
 // This keeps rejected alternatives and negated matches isolated.
 func matchSingleAtom(a atom, t token, bindings map[string]string) (map[string]string, bool) {
 	switch a.kind {
 	case atomPlaceholder:
-		if t.kind != tokIdent || a.text == "" {
-			return bindings, t.kind == tokIdent
+		// Preserve placeholder matching for words classified in Phase 2.
+		if !isWordKind(t.kind) || a.text == "" {
+			return bindings, isWordKind(t.kind)
 		}
 		if bound, ok := bindings[a.text]; ok {
 			return bindings, bound == t.text
@@ -314,6 +330,10 @@ func matchSingleAtom(a atom, t token, bindings map[string]string) (map[string]st
 		return matchSingleAtom(*a.right, t, bindings)
 	case atomAny:
 		return bindings, true
+	case atomKeyword:
+		return bindings, t.kind == tokKeyword
+	case atomNativeType:
+		return bindings, t.kind == tokNativeType
 	case atomOperator:
 		return bindings, t.kind == tokOperator
 	case atomNumber:
@@ -331,12 +351,12 @@ func matchSingleAtom(a atom, t token, bindings map[string]string) (map[string]st
 	case atomLiteral:
 		return bindings, t.kind == tokString || t.kind == tokNumber
 	case atomExact:
-		if a.tok.kind == t.kind {
-			if t.kind == tokString {
-				return bindings, unquotedPatternString(a.tok.text) == unquotedPatternString(t.text)
-			}
-			return bindings, a.tok.text == t.text
+		if a.tok.kind == tokString && t.kind == tokString {
+			return bindings, unquotedPatternString(a.tok.text) == unquotedPatternString(t.text)
 		}
+		// Patterns are parsed once without a language.
+		sameKind := a.tok.kind == t.kind || (isWordKind(a.tok.kind) && isWordKind(t.kind))
+		return bindings, sameKind && a.tok.text == t.text
 	}
 	return bindings, false
 }

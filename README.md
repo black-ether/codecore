@@ -155,13 +155,14 @@ matches. Results follow file and source order. Use `--format json` for structure
 line ranges and source text. Text output shows multiline matches on one line,
 with line breaks displayed as `\n`.
 
-- Exact tokens are case-sensitive. Quoted strings compare their trimmed
-  contents across quote styles.
+- Exact tokens are case-sensitive. Exact words match by text across identifiers,
+  keywords, and native types. Quoted strings compare their trimmed contents
+  across quote styles.
 - `ANY` matches any token, `OP` an operator, `NUM` a number, `OCT` a
   number starting with zero and a digit, `HEX` a number starting with
   `0x` or `0X`, `STR` a string, and `LIT` a number or string.
-- `_` matches any identifier. Repeating a numbered placeholder such as
-  `_1` requires the same identifier. Prefix a special word or placeholder
+- `_` matches any word token. Repeating a numbered placeholder such as
+  `_1` requires the same word. Prefix a special word or placeholder
   with an underscore to match it literally, as in `_ANY` or `__1`.
 - `NOT` negates the next atom and `OR` joins single-token alternatives.
   `...` skips up to 64 tokens, stops at unmatched closing brackets and
@@ -173,8 +174,15 @@ codecore --pattern 'func _ ( ... )' testdata/sample.go
 codecore --pattern '_ = NOT STR' source.go
 ```
 
-Phase 1 treats keywords and native types as identifiers, so `KEY` and `TYP`
-currently match nothing. It skips `//`, `/* */`, `#`, and `--` comments —
+`KEY` matches a keyword and `TYP` matches a native type using the source
+file's language.
+
+```sh
+codecore --pattern 'KEY _ ( ... )' testdata/sample.go  # keyword followed by a name and parentheses
+codecore --pattern 'TYP _ = ...' source.c              # typed declaration with an initializer
+```
+
+Pattern search skips `//`, `/* */`, `#`, and `--` comments —
 except a `#` at the start of a line followed by a preprocessor keyword
 (`include`, `define`, `ifdef`, ...), which is code, not a comment, so
 `--pattern 'FOO'` finds both `#define FOO 1` and its uses. `%` comments
