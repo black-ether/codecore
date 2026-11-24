@@ -174,10 +174,13 @@ codecore --pattern '_ = NOT STR' source.go
 ```
 
 Phase 1 treats keywords and native types as identifiers, so `KEY` and `TYP`
-currently match nothing. It skips `//`, `/* */`, `#`, and `--` comments,
-while `%` comments and docstrings remain in the token stream. You can combine
-`--pattern` with `--no-tests`. The CLI reports the first 1000 matches and
-warns if it finds more. Choose either `--pattern` or `--ask` for each invocation.
+currently match nothing. It skips `//`, `/* */`, `#`, and `--` comments —
+except a `#` at the start of a line followed by a preprocessor keyword
+(`include`, `define`, `ifdef`, ...), which is code, not a comment, so
+`--pattern 'FOO'` finds both `#define FOO 1` and its uses. `%` comments
+and docstrings remain in the token stream. You can combine `--pattern` with
+`--no-tests`. The CLI reports the first 1000 matches and warns if it finds
+more. Choose either `--pattern` or `--ask` for each invocation.
 
 ## Design
 

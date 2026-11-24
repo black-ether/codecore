@@ -6,6 +6,25 @@ import (
 	"testing"
 )
 
+func TestTokenizeCodePreprocessor(t *testing.T) {
+	// A # at the start of a line followed by a preprocessor keyword
+	// is code (C/C++), not a comment. A # anywhere else, or followed
+	// by other text, is a comment (Python, Ruby, shell).
+	src := "#include <stdio.h>\n  #define FOO 1\n# TODO note\nx = 1 # trailing\n"
+	want := []token{
+		{tokOperator, "#", 1}, {tokIdent, "include", 1},
+		{tokOperator, "<", 1}, {tokIdent, "stdio", 1},
+		{tokOperator, ".", 1}, {tokIdent, "h", 1},
+		{tokOperator, ">", 1},
+		{tokOperator, "#", 2}, {tokIdent, "define", 2},
+		{tokIdent, "FOO", 2}, {tokNumber, "1", 2},
+		{tokIdent, "x", 4}, {tokOperator, "=", 4}, {tokNumber, "1", 4},
+	}
+	if got := tokenizeCode([]byte(src)); !slices.Equal(got, want) {
+		t.Fatalf("tokens = %#v, want %#v", got, want)
+	}
+}
+
 func TestTokenizeCode(t *testing.T) {
 	src := "α_2(0x1F, 3.14) == \"a\\\"b\" // hidden\n" +
 		"`raw\nvalue` /* hidden\nmore */ # hidden\n" +

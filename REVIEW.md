@@ -652,6 +652,14 @@ future work.
 The demos produced one self-assignment, two function matches, and three
 assignments whose right-hand token matched `NOT STR`.
 
+Preprocessor fix (2026-11-24, same day): the first `--pattern` build
+treated every `#` as a comment, so `#define FOO 1` was invisible to
+patterns. The tokenizer now treats a `#` at the start of a line
+followed by a preprocessor keyword (`include`, `define`, `ifdef`, ...)
+as code — `#` becomes an operator token — while a `#` anywhere else
+stays a comment. `--pattern 'FOO'` now finds both the `#define` and
+its uses. Test `TestTokenizeCodePreprocessor` covers it.
+
 ```text
 $ /tmp/codecore-fold --pattern '_1 = _1' /tmp/codecore-pattern-demo.txt
   /tmp/codecore-pattern-demo.txt [L:1] x = x

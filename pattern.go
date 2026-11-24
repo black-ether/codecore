@@ -26,13 +26,53 @@ type token struct {
 	line int
 }
 
-const patternOperators = "=<>!+-*/%&|^~?:;,"
+const patternOperators = "=<>!+-*/%&|^~?:;,#"
 
-func codeComment(s string) string {
+// preprocessorKeywords are the words that make a # at the start of a
+// line a C-style preprocessor directive instead of a comment.
+var preprocessorKeywords = map[string]bool{
+	"include": true, "import": true, "define": true, "undef": true,
+	"ifdef": true, "ifndef": true, "if": true, "else": true,
+	"elif": true, "endif": true, "pragma": true, "error": true,
+	"warning": true, "line": true,
+}
+
+// isPatternPreprocessorLine reports whether the # at pos in src starts a
+// C-style preprocessor directive: the # is the first non-whitespace
+// character on its line, and the word after it is a preprocessor
+// keyword. A # anywhere else (or followed by other text) is a
+// comment, as in Python, Ruby, Perl, and shell.
+func isPatternPreprocessorLine(src string, pos int) bool {
+	for i := pos - 1; i >= 0; i-- {
+		if src[i] == '\n' {
+			break
+		}
+		if src[i] != ' ' && src[i] != '\t' && src[i] != '\r' {
+			return false
+		}
+	}
+	j := pos + 1
+	for j < len(src) && (src[j] == ' ' || src[j] == '\t') {
+		j++
+	}
+	k := j
+	for k < len(src) && unicode.IsLetter(rune(src[k])) {
+		k++
+	}
+	return preprocessorKeywords[src[j:k]]
+}
+
+// codeComment reports whether the text at pos in src starts a comment:
+// "/*" for a block comment, "line" for //, --, or # to end of line.
+// A # that starts a preprocessor directive is code, not a comment.
+func codeComment(src string, pos int) string {
+	s := src[pos:]
 	switch {
 	case strings.HasPrefix(s, "/*"):
 		return "/*"
-	case strings.HasPrefix(s, "//"), strings.HasPrefix(s, "--"), s[0] == '#':
+	case strings.HasPrefix(s, "//"), strings.HasPrefix(s, "--"):
+		return "line"
+	case len(s) > 0 && s[0] == '#' && !isPatternPreprocessorLine(src, pos):
 		return "line"
 	}
 	return ""
@@ -61,13 +101,15 @@ func quotedLength(s string) int {
 func tokenizeCode(src []byte) []token {
 	var tokens []token
 	line := 1
-	for s := string(src); len(s) > 0; {
+	srcStr := string(src)
+	for s := srcStr; len(s) > 0; {
 		r, size := utf8.DecodeRuneInString(s)
 		end := size
 		var kind tokenKind
 		emit := true
+		pos := len(srcStr) - len(s)
 		// Phase 1 treats % as an operator and docstrings as strings.
-		switch comment := codeComment(s); {
+		switch comment := codeComment(srcStr, pos); {
 		case comment == "/*":
 			end = len(s)
 			if close := strings.Index(s[2:], "*/"); close >= 0 {
@@ -103,7 +145,7 @@ func tokenizeCode(src []byte) []token {
 			kind = tokOperator
 		case strings.ContainsRune(patternOperators, r):
 			kind = tokOperator
-			for end < len(s) && strings.ContainsRune(patternOperators, rune(s[end])) && codeComment(s[end:]) == "" {
+			for end < len(s) && strings.ContainsRune(patternOperators, rune(s[end])) && codeComment(srcStr, pos+end) == "" {
 				end++
 			}
 		default:
