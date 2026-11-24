@@ -15,13 +15,17 @@ Languages: Go, PowerShell, JavaScript, TypeScript, Rust, C, C++,
 C#, Java, Kotlin, Swift, Scala, Dart, Groovy, Zig, CSS, JSON, PHP
 (brace parser); Python, Ruby, Perl, Lua, R, Julia, Objective-C,
 Bash, SQL, MATLAB, LaTeX, Clojure, Haskell, YAML (indent parser);
-HTML, XML (tag parser). One parser per language, chosen by the
-33-language test database — see `ROUTING.md` for the table and the
-reasons. A directory argument is walked recursively (sorted by
-path, overlapping inputs deduplicated); `.git`, `node_modules`,
+HTML, XML (tag parser); plain text (text parser) for Markdown,
+TOML, INI, and other text files. One parser per language, chosen
+by the 33-language test database — see `ROUTING.md` for the table
+and the reasons. A directory argument is walked recursively (sorted
+by path, overlapping inputs deduplicated); `.git`, `node_modules`,
 `__pycache__`, `.venv`, `vendor`, `target`, `dist`, and `build`
 are never descended into, and files without a supported extension
-are skipped silently. A file passed directly is always kept.
+are skipped silently. A file passed directly is always kept — and
+if it has no registered language, it is outlined as plain text
+(use `--lang text` to force that parser on any file; binary files
+are rejected, not outlined as garbage).
 
 ## How it works
 

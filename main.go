@@ -134,6 +134,16 @@ func run(args []string) int {
 		var ok bool
 		if *langFlag == "auto" {
 			ext, ok = ExtractorFor(f)
+			if !ok {
+				// No registered language for this extension: fall
+				// back to the plain-text parser, so --ask (and
+				// outline) work on any text file instead of
+				// erroring. The text parser rejects binary files
+				// itself (NUL bytes). Directory walks still only
+				// include registered extensions, so a walk does
+				// not try to outline every unknown file it finds.
+				ext, ok = ExtractorByLanguage("text")
+			}
 		} else {
 			ext, ok = ExtractorByLanguage(*langFlag)
 		}

@@ -28,8 +28,8 @@ func TestCollectFilesRecursive(t *testing.T) {
 		"a.py",
 		"sub/b.go",
 		"sub/deep/c.py",
-		"sub/deep/d.txt",        // unregistered: skipped
-		"README.md",             // unregistered: skipped
+		"sub/deep/d.txt",        // text parser: included
+		"README.md",             // text parser: included
 		"node_modules/pkg/e.js", // junk dir: skipped
 		".git/hooks/f.py",       // junk dir: skipped
 		"build/g.go",            // junk dir: skipped
@@ -39,9 +39,11 @@ func TestCollectFilesRecursive(t *testing.T) {
 		t.Fatal(err)
 	}
 	want := []string{
+		filepath.Join(root, "README.md"),
 		filepath.Join(root, "a.py"),
 		filepath.Join(root, "sub", "b.go"),
 		filepath.Join(root, "sub", "deep", "c.py"),
+		filepath.Join(root, "sub", "deep", "d.txt"),
 	}
 	if !reflect.DeepEqual(got, want) {
 		t.Errorf("collectFiles(%q) = %v, want %v", root, got, want)

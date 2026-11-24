@@ -1,6 +1,8 @@
 package main
 
 import (
+	"bytes"
+	"fmt"
 	"strings"
 )
 
@@ -56,6 +58,13 @@ func (e foldExtractor) Extract(filename string, src []byte) (*Outline, error) {
 		nodes = parsePython(lines)
 	case "tags":
 		nodes, unbalanced = parseTags(lines)
+	case "text":
+		// The fallback parser only ever sees text: a binary file
+		// (NUL bytes) is rejected here, not outlined as garbage.
+		if bytes.Contains(src, []byte{0}) {
+			return nil, fmt.Errorf("%s: not a text file (contains NUL bytes)", filename)
+		}
+		nodes = parseText(lines)
 	default:
 		nodes, unbalanced = parseBraces(lines, e.language)
 	}
@@ -121,4 +130,15 @@ func init() {
 	// almost nothing.
 	RegisterExtractor(foldExtractor{language: "html", extensions: []string{".html", ".htm"}, parser: "tags", defaultDepth: 2})
 	RegisterExtractor(foldExtractor{language: "xml", extensions: []string{".xml"}, parser: "tags", defaultDepth: 2})
+
+	// Plain text: the fallback parser for files with no registered
+	// language. It folds by indentation with no comment or string
+	// rules, so a markdown heading, a TOML section header, and a
+	// config key are all just lines. The extensions below are the
+	// common text types, included in directory walks; any other
+	// text file still works when passed directly, because main.go
+	// falls back to this parser for an unregistered extension
+	// (the NUL check in Extract rejects binary files). Use
+	// --lang text to force this parser on any file.
+	RegisterExtractor(foldExtractor{language: "text", extensions: []string{".md", ".markdown", ".txt", ".toml", ".ini", ".cfg", ".conf", ".log", ".rst", ".adoc", ".text", ".env", ".properties"}, parser: "text"})
 }

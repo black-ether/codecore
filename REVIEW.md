@@ -512,3 +512,53 @@ higher, so it now asserts the file set instead. gofmt/vet/test/
 race all pass; fixtures and pp.ps1 unchanged (34/42/28/1494).
 Tested locally by Hana only, not on the agent yet, per Jo's
 instruction.
+
+## 12. Plain-text fallback: --ask works on any file (2026-11-24)
+
+Jo: "Does the --ask and the go sub command works on any file?
+They shouldn't be limited by file type right? Should we expand
+that capability?" Measured first: `--ask` on a `.md` file errored
+with "no extractor", `--ask` on a `.toml` file errored the same
+way, `--ask` on a directory of only `.md` files silently skipped
+them and printed "no matches", and codegos `go` on a `.js` file
+errored "unsupported file extension". So no — `--ask` was limited
+to the 34 registered languages, codegos `go` to 3.
+
+The codecore half is built here (the codegos half — comment-syntax
+families — is Jo's repo and a separate decision, not built). A new
+parser, `parseText` in `fold_text.go`, folds any plain-text file by
+indentation only: every non-blank line is a node, nested under the
+nearest preceding less-indented line. No comment, string, or
+decorator rules — a markdown heading, a TOML section header, and
+a config key are all just lines, so they all show. It is
+registered as language "text" for the common text extensions
+(.md, .markdown, .txt, .toml, .ini, .cfg, .conf, .log, .rst,
+.adoc, .text, .env, .properties), so those are included in
+directory walks. And `main.go` falls back to it for a directly
+passed file with no registered language, so `--ask` (and outline)
+work on any text file — including one with no extension — instead
+of erroring. Binary files are rejected in `Extract` (NUL bytes),
+not outlined as garbage. `--lang text` forces the parser on any
+file. Directory walks still only include registered extensions,
+so a walk does not try to outline every unknown file it finds.
+
+Measured: `--ask "serde"` on a `.toml` file finds `serde = "1.0"`;
+`--ask "login"` on an extensionless `NOTES` file finds the
+indented "fix the login bug" line under its "TODO" parent;
+`--ask "BM25"` on `README.md` finds the two BM25 lines;
+`--ask "retrieval" --per-file` on the codecore directory surfaces
+`REVIEW.md` at #3, so `.md` files are searched in walks now.
+`--lang text` on a `.py` file shows the docstring line the
+Python parser hides — the expected difference, since the plain
+parser has no language rules.
+
+Tests: `TestFoldText` (headings nest, blank lines skipped),
+`TestFoldTextRegistered` (text extensions route to the parser,
+an unregistered extension has no extractor in the registry),
+`TestFoldTextRejectsBinary`, `TestFoldTextAsk`. One existing test
+changed with the behaviour: `TestCollectFilesRecursive` used to
+assert that `README.md` and `d.txt` were skipped as unregistered;
+they are now included as text files, so the expected list grew.
+gofmt/vet/test/race all pass; fixtures and pp.ps1 unchanged
+(34/42/28/1494). Tested locally by Hana only, not on the agent
+yet, per Jo's instruction.

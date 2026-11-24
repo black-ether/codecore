@@ -4,11 +4,13 @@
 //
 //   - extraction: an Extractor turns source bytes into an Outline by
 //     folding blocks — indentation for Python, brackets for Go and
-//     PowerShell (fold.go, fold_python.go, fold_braces.go). No kind
-//     classification, no parsing: every code line is a node, and a line
-//     that opens a multi-line block is a node with children. That is the
-//     whole model, the same as manually collapsing every code block in
-//     an editor and looking at the big picture.
+//     PowerShell, tags for HTML/XML, plain indentation for text
+//     (fold.go, fold_python.go, fold_braces.go, fold_tags.go,
+//     fold_text.go). No kind classification, no parsing: every code
+//     line is a node, and a line that opens a multi-line block is a
+//     node with children. That is the whole model, the same as
+//     manually collapsing every code block in an editor and looking
+//     at the big picture.
 //   - model: Node carries a 1-based line number, the line's text, and
 //     its children in source order. Outline carries the file, the
 //     language, and Unbalanced, set when brackets did not balance (a
