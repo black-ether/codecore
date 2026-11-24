@@ -106,7 +106,20 @@ not an outline node, so it is not included — the range covers the
 outline lines belonging to the block, not the closer. Matching uses
 case-insensitive letter and digit tokens. A query term of 3 or more
 letters also matches any longer term it prefixes, so `auth` finds
-`authenticate`; shorter terms match exactly only. Synonyms can still
+`authenticate`; shorter terms match exactly only. Query terms under
+3 letters are dropped entirely — a 1-2 letter term is too generic
+to search on ("pp" would match every "pp_*" identifier). A query
+term that appears verbatim in the line earns a substring bonus on
+top of BM25, so an exact identifier like `Write-Warning` outranks
+a line that merely contains the word "warning". Use `--def-only`
+with `--ask` to return definitions only, filtering out calls and
+uses of the same name. Use `--per-file` with `--ask` to return only
+the best match from each file, so one file cannot fill the whole
+top-N list and hide other files — for a repo-wide "which files
+implement X" question, `--per-file` is the right mode. A definition
+is recognised by its leading keyword (`def`, `func`, `class`, …)
+or by a single `=` assignment, including Lisp forms (`(defn foo`,
+whose kebab-case name keeps its hyphens). Synonyms can still
 miss relevant lines. Search covers the text retained by the outline,
 including its line length cap.
 

@@ -372,3 +372,143 @@ matches from MATLAB, Ruby, and Rust files in one ranked list;
 `--ask "keymap" testdb` finds the real-Lua keymap files. This
 closes con #12's cheap half (recursive walking); the package-view
 half stays open, as does #4.
+
+## 10. Retrieval precision: short terms, substring bonus, --def-only (2026-11-24)
+
+Jo: "I thought there were cases in the pass test where the agent
+didn't get better results using --ask vs grep, could you look into
+that and figure out why." The investigation (reproduced live with
+the binary, since the /tmp run files were wiped) found six
+mechanisms, and three quick fixes address the sharpest ones.
+
+The mechanisms: (1) top-N truncation — --ask returns the top 5 by
+default, so a correct answer that ranks low is silently dropped
+(Task D's Clojure implementation does not make the top 10, while
+grep finds all 7 files mentioning "heap"); (2) false positives
+from uses — --ask ranks `main.m` #2 for Task D because it calls
+`heapSort(arr)`, though it does not implement it; (3) tokenization
+splits compound names — `Write-Warning` becomes "write"+"warning",
+so `$warningMessage` lines match; `pp_settings.json` becomes
+"pp"+"settings"+"json", so `ConvertFrom-Json` and `'pp list'`
+match; (4) prefix matching adds noise — "pp" matches `pp_commands`
+and `pp_list`; (5) BM25 ties are arbitrary — the top 3
+`Write-Warning` results all score 6.12, so ranking falls back to
+line order; (6) the agent verifies with grep anyway, so --ask is
+additive rather than substitutive.
+
+The fixes, all in `retrieve.go` / `main.go`:
+
+- **Short query terms dropped.** `filterQueryTerms` now drops terms
+  under 3 letters, not just stopwords. A 1-2 letter term is too
+  generic to search on — "pp" from "pp_settings" would match every
+  "pp_*" identifier. This is a query-side filter only; short tokens
+  stay in the code index. (An earlier idea — treating `_` as a
+  token character so `pp_commands` stays one token — was rejected
+  after analysis: it would break Task D, because the query term
+  "heap_sort" would no longer match the Clojure file's hyphenated
+  "lazy-heap-sort". Dropping short query terms fixes the "pp"
+  false positive without that regression.)
+- **Substring bonus.** A query term that appears verbatim (as a
+  case-insensitive substring) in the node's line earns +3.0 on top
+  of BM25, once per term per document. Terms under 3 letters are
+  skipped for the bonus too — a 2-letter substring appears inside
+  too many words (the first version of this bonus made "au" match
+  "authenticate", failing `TestRetrievePrefixMatch`; the length
+  guard fixed it). An exact identifier like `Write-Warning` now
+  outranks a line that merely contains the word "warning".
+- **`--def-only` flag.** With `--ask`, return definitions only,
+  filtering out calls and uses. The `isDef` already computed by
+  `extractName` is now stored on each retrieval document and
+  honoured by the filter.
+
+Measured before/after on the same queries (new binary vs the
+pre-fix binary):
+
+- `Write-Warning`: the two `$warningMessage` near-misses are gone
+  from the top 5, replaced by two more real `Write-Warning` calls.
+  The top 3 are still tied (12.12 each) — they are all correct
+  answers, so the tie does not matter.
+- `pp_settings.json`: the `pp_commands` and `'pp list'` false
+  positives are gone (the "pp" term is dropped); only 3 results
+  now, with the correct line still #1 by a wide margin (21.39 vs
+  7.73). Two `ConvertFrom/To-Json` lines remain as lower-ranked
+  near-misses (they match "json").
+- `configFilePath`: order unchanged, all scores +3.00 (every result
+  contains the term as a substring). No harm.
+- Task C (`RunCommand AddCommand`): order unchanged, top 2 still
+  tied (9.01) — a parameter declaration ahead of the implementation
+  block. Not fixed by these changes.
+- Task D (`heapsort heap_sort heapify sift_down`, top 10): without
+  `--def-only`, `main.m` is still #2 and Clojure is still absent
+  (ranks 28-29). With `--def-only`, `main.m` is gone, but Clojure
+  is still absent — a blind spot in `extractName`: Lisp lines start
+  with `(`, so `(defn lazy-heap-sort` gets no name and `isDef`
+  false, and `--def-only` filters it out. Fixing `extractName` for
+  parenthesised definitions is the follow-up, not part of this cut.
+  The `--def-only` top 10 also still includes other sort files
+  (MATLAB/Ruby) that match "sort" but are not heap sort.
+
+Tests: `TestFilterQueryTermsShortTerms`, `TestRetrieveSubstringBonus`,
+`TestRetrieveDefOnly`. gofmt/vet/test/race all pass; fixtures and
+pp.ps1 unchanged (34/42/28/1494). Tested locally by Hana only, not
+on the agent yet, per Jo's instruction.
+
+## 11. Lisp definitions and per-file results (2026-11-24)
+
+Jo: "Fix the two and push if you tested out fine, we'll move on
+agent later." The two are the Lisp blind spot and the per-file
+dedup from §10.
+
+**Lisp definitions.** `extractName` gave a Lisp definition no name
+and `isDef` false, because the line starts with `(` and the
+heuristic treated that as the end of the name scan — so `(defn
+lazy-heap-sort` was invisible to `--def-only` and got no name
+boost. Three changes in `extractName`:
+
+- Leading whitespace and opening parens are stripped before the
+  scan, so "(defn foo" is read as "defn foo".
+- `defn`, `defmacro`, `defmethod` join the definition keywords.
+- The name extends backwards over `-identifier` segments as well
+  as `.identifier`, so a kebab-case name keeps its hyphens
+  (`lazy-heap-sort`, not just `sort`). The hyphen must sit between
+  two identifier characters, so `a - b` does not extend.
+- A bracket after a space is now a delimiter on a definition
+  header (`(defn f [x]` ends the name at `[`), while in an
+  expression it stays a literal (`return [*quick_sort(...)]`
+  still names `quick_sort`, inside the brackets). The scan first
+  finds the opening identifier to decide which rule applies.
+
+**Per-file results.** `--ask` gains a `--per-file` flag: after
+ranking, only the best result from each file is kept, so one file
+cannot fill the whole top-N list and push other files out. The
+dedup runs before the top cut, so `--top` then limits the number
+of files. The default (no flag) is unchanged.
+
+Measured on Task D (`heapsort heap_sort heapify sift_down`,
+`--top 10`, testdb): without `--per-file`, Clojure ranks 28-29
+and never appears. With `--per-file`, all four implementation
+files land in the top 5 — Go `heapsort.go` (24.53), Java
+`HeapSort.java` (23.72), Objective-C `sorts.m` (21.07), and
+Clojure `heap_sort.clj` (17.45, up from 7.92 once the Lisp fix
+gave it a name and a definition boost). `main.m` (a caller, not
+an implementation) still takes one slot at #2; `--def-only`
+removes it, but then `sorts.m` also drops out, because a C
+function definition (`void heapSort(...)`) starts with its return
+type, not a definition keyword, so it is not recognised as a
+definition — a known gap, left open. The `--per-file` top 10
+also surfaces weak matches from other files (a merge-sort file,
+a sort-utils file), since it returns the best match from every
+file even when that file only weakly matches; the scores make
+the weak ones easy to spot.
+
+Tests: `TestExtractName` gains Lisp cases (`(defn lazy-heap-sort`
+→ `lazy-heap-sort`, true; `(defmacro with-temp [x]` → `with-temp`;
+`(ns sorts.heap-sort` → `sorts.heap-sort`, false, since a
+namespace declaration is not a definition); `TestRetrievePerFile`
+(one result per file, the kept result from a file is its best
+match). One test-writing catch: the per-file test first asserted
+a fixed file order, but BM25 legitimately ranks the rarer term
+higher, so it now asserts the file set instead. gofmt/vet/test/
+race all pass; fixtures and pp.ps1 unchanged (34/42/28/1494).
+Tested locally by Hana only, not on the agent yet, per Jo's
+instruction.

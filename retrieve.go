@@ -53,9 +53,16 @@ var queryStopwords = map[string]bool{
 }
 
 // filterQueryTerms drops query stopwords from tokenized query terms.
+// Terms shorter than 3 letters are also dropped: a 1-2 letter term is
+// too generic to search on (e.g. "pp" from "pp_settings" would match
+// every "pp_*" identifier). Dropping them here, in the query filter
+// only, keeps short tokens in the code index untouched.
 func filterQueryTerms(terms []string) []string {
 	kept := terms[:0]
 	for _, term := range terms {
+		if len(term) < 3 {
+			continue
+		}
 		if !queryStopwords[term] {
 			kept = append(kept, term)
 		}
@@ -92,12 +99,14 @@ func prefixMatches(postings map[string][]termOccurrence, query string) map[int]f
 }
 
 type retrievalDocument struct {
-	file    string
-	node    *Node
-	length  int
-	parents []string
-	end     int
-	name    string
+	file      string
+	node      *Node
+	length    int
+	parents   []string
+	end       int
+	name      string
+	isDef     bool
+	lowerText string
 }
 
 // definitionKeywords are the words that introduce a definition. A line
@@ -111,6 +120,9 @@ var definitionKeywords = map[string]bool{
 	"public": true, "private": true, "protected": true, "static": true,
 	"async": true, "export": true, "method": true, "proc": true,
 	"trait": true, "impl": true, "enum": true,
+	// Lisp/Clojure definitions, which open with a paren: (defn foo,
+	// (defmacro bar, (defmethod baz.
+	"defn": true, "defmacro": true, "defmethod": true,
 }
 
 // nameBoost is how many extra times a name's tokens count in BM25. A
@@ -135,23 +147,51 @@ const nameBoost = 2
 // keyword, or when the delimiter is a single "=" (an assignment, not a
 // comparison). Returns ("", false) when there is no usable name.
 func extractName(text string) (string, bool) {
+	// Lisp-style definitions open with a paren: "(defn foo" names
+	// "foo". Strip leading whitespace and opening parens so the
+	// keyword and name are visible to the scan below. A plain
+	// parenthesised expression ("(x + y)") just yields its last
+	// identifier with isDef false, which is harmless.
+	text = strings.TrimLeft(text, " \t(")
 	runes := []rune(text)
+	// Find the first identifier: on a definition header a bracket
+	// starts the parameter list even after a space ("(defn f [x]"),
+	// while in an expression a bracket after a space is a literal
+	// ("return [*quick_sort(...)]" names quick_sort, inside the
+	// brackets). So the bracket rules below depend on whether the
+	// line opens with a definition keyword.
+	firstID := ""
+	for i, r := range runes {
+		if unicode.IsLetter(r) || r == '_' {
+			j := i
+			for j < len(runes) && (unicode.IsLetter(runes[j]) || unicode.IsDigit(runes[j]) || runes[j] == '_') {
+				j++
+			}
+			firstID = string(runes[i:j])
+			break
+		}
+		if unicode.IsDigit(r) {
+			break
+		}
+	}
+	isDefHeader := definitionKeywords[strings.ToLower(firstID)]
 	// The name is in the text before the first delimiter. A "[" or "{"
 	// is a delimiter only when attached to a name (a generic, an index,
-	// or a block opener). A standalone list or dict literal is not —
-	// the name is inside it (return [*quick_sort(...)] names
-	// quick_sort, not return).
+	// or a block opener), or — on a definition header — anywhere, since
+	// it starts the parameter list. A standalone list or dict literal
+	// is not a delimiter: the name is inside it (return
+	// [*quick_sort(...)] names quick_sort, not return).
 	end := len(runes)
 	for i, r := range runes {
 		if r == '(' || r == '=' || r == ':' {
 			end = i
 			break
 		}
-		if r == '[' && i > 0 && (unicode.IsLetter(runes[i-1]) || unicode.IsDigit(runes[i-1]) || runes[i-1] == '_') {
+		if r == '[' && (isDefHeader || (i > 0 && (unicode.IsLetter(runes[i-1]) || unicode.IsDigit(runes[i-1]) || runes[i-1] == '_'))) {
 			end = i
 			break
 		}
-		if r == '{' && i > 0 && (runes[i-1] == ')' || runes[i-1] == ':' || unicode.IsLetter(runes[i-1]) || unicode.IsDigit(runes[i-1]) || runes[i-1] == '_') {
+		if r == '{' && (isDefHeader || (i > 0 && (runes[i-1] == ')' || runes[i-1] == ':' || unicode.IsLetter(runes[i-1]) || unicode.IsDigit(runes[i-1]) || runes[i-1] == '_'))) {
 			end = i
 			break
 		}
@@ -191,15 +231,27 @@ func extractName(text string) (string, bool) {
 	// The name is the last identifier, skipping definition keywords
 	// (a Go method with a receiver lands on "func" and has no earlier
 	// identifier to fall back to, so it has no usable name), extended
-	// backwards over ".identifier" segments.
+	// backwards over ".identifier" segments (a method keeps its dotted
+	// path) and over "-identifier" segments (a kebab-case name like
+	// lazy-heap-sort keeps its hyphens; the hyphen must sit between
+	// two identifier characters, so "a - b" does not extend).
 	for i := len(ids) - 1; i >= 0; i-- {
 		if definitionKeywords[strings.ToLower(ids[i].text)] {
 			continue
 		}
 		name := ids[i].text
 		pos := ids[i].start
-		for pos > 0 && prefix[pos-1] == '.' {
-			// Find the identifier ending just before the dot.
+		for pos > 0 {
+			sep := prefix[pos-1]
+			if sep != '.' && sep != '-' {
+				break
+			}
+			// A hyphen only joins a kebab-case name when it sits
+			// between two identifier characters.
+			if sep == '-' && (pos < 2 || (!unicode.IsLetter(prefix[pos-2]) && !unicode.IsDigit(prefix[pos-2]) && prefix[pos-2] != '_')) {
+				break
+			}
+			// Find the identifier ending just before the separator.
 			e := pos - 1
 			for e > 0 && (unicode.IsLetter(prefix[e-1]) || unicode.IsDigit(prefix[e-1]) || prefix[e-1] == '_') {
 				e--
@@ -207,7 +259,7 @@ func extractName(text string) (string, bool) {
 			if e == pos-1 || (!unicode.IsLetter(prefix[e]) && prefix[e] != '_') {
 				break
 			}
-			name = string(prefix[e:pos-1]) + "." + name
+			name = string(prefix[e:pos-1]) + string(sep) + name
 			pos = e
 		}
 		return name, isDef
@@ -235,7 +287,7 @@ type termOccurrence struct {
 	frequency int
 }
 
-func retrieve(outlines []*Outline, terms []string, top int) []retrievalResult {
+func retrieve(outlines []*Outline, terms []string, top int, defOnly bool, perFile bool) []retrievalResult {
 	var documents []retrievalDocument
 	postings := make(map[string][]termOccurrence)
 	totalLength := 0
@@ -255,7 +307,7 @@ func retrieve(outlines []*Outline, terms []string, top int) []retrievalResult {
 			}
 			length := len(tokens)
 			id := len(documents)
-			documents = append(documents, retrievalDocument{file, node, length, parents, endLine(node), name})
+			documents = append(documents, retrievalDocument{file, node, length, parents, endLine(node), name, isDef, strings.ToLower(node.Text)})
 			totalLength += length
 			frequencies := make(map[string]int)
 			for _, token := range tokens {
@@ -282,6 +334,12 @@ func retrieve(outlines []*Outline, terms []string, top int) []retrievalResult {
 		return results
 	}
 	const k1, b = 1.2, 0.75
+	// substringBonus rewards a query term that appears verbatim (as a
+	// substring) in the node's line, so an exact identifier like
+	// Write-Warning outranks a line that merely contains the word
+	// "warning". Applied once per term per document, on top of BM25,
+	// whether or not the term matched as a token.
+	const substringBonus = 3.0
 	n := float64(len(documents))
 	avgdl := float64(totalLength) / n
 	scores := make([]float64, len(documents))
@@ -291,18 +349,28 @@ func retrieve(outlines []*Outline, terms []string, top int) []retrievalResult {
 	// "authenticate".
 	for _, term := range terms {
 		matched := prefixMatches(postings, term)
-		if len(matched) == 0 {
-			continue
+		if len(matched) > 0 {
+			df := float64(len(matched))
+			idf := math.Log(1 + (n-df+0.5)/(df+0.5))
+			for doc, tf := range matched {
+				dl := float64(documents[doc].length)
+				scores[doc] += idf * (tf * (k1 + 1)) / (tf + k1*(1-b+b*dl/avgdl))
+			}
 		}
-		df := float64(len(matched))
-		idf := math.Log(1 + (n-df+0.5)/(df+0.5))
-		for doc, tf := range matched {
-			dl := float64(documents[doc].length)
-			scores[doc] += idf * (tf * (k1 + 1)) / (tf + k1*(1-b+b*dl/avgdl))
+		for i, doc := range documents {
+			// Terms under 3 letters are skipped for the substring bonus:
+			// a 2-letter substring appears inside too many words to mean
+			// anything (e.g. "au" inside "authenticate").
+			if len(term) >= 3 && strings.Contains(doc.lowerText, term) {
+				scores[i] += substringBonus
+			}
 		}
 	}
 	for i, doc := range documents {
 		if scores[i] > 0 {
+			if defOnly && !doc.isDef {
+				continue
+			}
 			results = append(results, retrievalResult{
 				File: doc.file, Line: doc.node.Line, End: doc.end, Name: doc.name, Text: doc.node.Text,
 				Score: scores[i], Parents: doc.parents,
@@ -319,6 +387,23 @@ func retrieve(outlines []*Outline, terms []string, top int) []retrievalResult {
 		}
 		return a.Line < b.Line
 	})
+	// Per-file mode keeps only the best result from each file, so one
+	// file cannot fill the whole top-N list and push other files out
+	// (in a repo-wide search the Go file took 4 of the top 10 slots,
+	// hiding the Clojure implementation entirely). The dedup runs
+	// before the top cut, so --top then limits the number of files.
+	if perFile {
+		seen := make(map[string]bool)
+		kept := results[:0]
+		for _, r := range results {
+			if seen[r.File] {
+				continue
+			}
+			seen[r.File] = true
+			kept = append(kept, r)
+		}
+		results = kept
+	}
 	if len(results) > top {
 		results = results[:top]
 	}

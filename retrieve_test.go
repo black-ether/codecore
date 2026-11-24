@@ -26,7 +26,7 @@ func TestBM25Scoring(t *testing.T) {
 		{Line: 3, Text: "common longer document"},
 		{Line: 4, Text: "common"},
 	}}}
-	got := retrieve(outlines, tokenize("rare common"), 5)
+	got := retrieve(outlines, tokenize("rare common"), 5, false, false)
 	if len(got) != 4 {
 		t.Fatalf("got %d results, want 4", len(got))
 	}
@@ -59,7 +59,7 @@ func TestRetrieveRanking(t *testing.T) {
 		line int
 	}{{"a.go", 9}, {"a.go", 4}, {"a.go", 8}, {"z.go", 1}}
 	for _, top := range []int{2, 5} {
-		got := retrieve(outlines, tokenize("find missing"), top)
+		got := retrieve(outlines, tokenize("find missing"), top, false, false)
 		if len(got) != min(top, len(want)) {
 			t.Fatalf("top %d returned %d results, want %d", top, len(got), min(top, len(want)))
 		}
@@ -69,7 +69,7 @@ func TestRetrieveRanking(t *testing.T) {
 			}
 		}
 	}
-	if got := retrieve(outlines, tokenize("missing"), 5); len(got) != 0 {
+	if got := retrieve(outlines, tokenize("missing"), 5, false, false); len(got) != 0 {
 		t.Errorf("unmatched query returned %+v", got)
 	}
 }
@@ -97,6 +97,15 @@ func TestExtractName(t *testing.T) {
 		{"return [*quick_sort(lesser), *equal, *quick_sort(greater)]", "quick_sort", false},
 		{"vim.api.nvim_set_keymap(m, l, rhs, opts)", "vim.api.nvim_set_keymap", false},
 		{"package sample", "sample", false},
+		// Lisp-style definitions open with a paren; the keyword and
+		// name are inside it, and a kebab-case name keeps its hyphens.
+		{"(defn lazy-heap-sort", "lazy-heap-sort", true},
+		{"(defn heap-sort [coll]", "heap-sort", true},
+		{"(defmacro with-temp [x]", "with-temp", true},
+		{"(defmethod render :html [x]", "render", true},
+		{"(ns sorts.heap-sort", "sorts.heap-sort", false},
+		{"(x + y)", "y", false},
+		{"a - b", "b", false},
 	}
 	for _, c := range cases {
 		name, def := extractName(c.line)
@@ -111,7 +120,7 @@ func TestRetrieveNameBoost(t *testing.T) {
 		{Line: 1, Text: "def authenticate_user():"},
 		{Line: 5, Text: "return authenticate_user()"},
 	}}}
-	got := retrieve(outlines, tokenize("authenticate user"), 5)
+	got := retrieve(outlines, tokenize("authenticate user"), 5, false, false)
 	if len(got) != 2 {
 		t.Fatalf("got %+v, want 2 results", got)
 	}
@@ -170,17 +179,17 @@ func TestRetrievePrefixMatch(t *testing.T) {
 		{Line: 5, Text: "x = 1"},
 	}}}
 	// "auth" finds "authenticate" by prefix.
-	got := retrieve(outlines, tokenize("auth"), 5)
+	got := retrieve(outlines, tokenize("auth"), 5, false, false)
 	if len(got) != 1 || got[0].Line != 1 {
 		t.Errorf("retrieve(auth) = %+v, want the authenticate_user definition", got)
 	}
 	// "aut" (3 letters) also prefixes "authenticate".
-	got = retrieve(outlines, tokenize("aut"), 5)
+	got = retrieve(outlines, tokenize("aut"), 5, false, false)
 	if len(got) != 1 || got[0].Line != 1 {
 		t.Errorf("retrieve(aut) = %+v, want the authenticate_user definition", got)
 	}
 	// "au" (2 letters) is too short to prefix-match, and matches nothing exactly.
-	got = retrieve(outlines, tokenize("au"), 5)
+	got = retrieve(outlines, tokenize("au"), 5, false, false)
 	if len(got) != 0 {
 		t.Errorf("retrieve(au) = %+v, want no results", got)
 	}
@@ -197,18 +206,18 @@ func TestRetrieveRanges(t *testing.T) {
 		{Line: 5, Text: "standalone"},
 	}}}
 	// A block's end is its last descendant's line; a leaf's end is its own line.
-	got := retrieve(outlines, tokenize("outer"), 5)
+	got := retrieve(outlines, tokenize("outer"), 5, false, false)
 	if len(got) != 1 || got[0].Line != 1 || got[0].End != 4 {
 		t.Fatalf("outer = %+v, want line 1 end 4", got)
 	}
-	got = retrieve(outlines, tokenize("inner"), 5)
+	got = retrieve(outlines, tokenize("inner"), 5, false, false)
 	if len(got) != 2 {
 		t.Fatalf("inner = %+v, want 2 results", got)
 	}
 	if got[0].Line != 2 || got[0].End != 2 || got[1].Line != 3 || got[1].End != 4 {
 		t.Errorf("inner = %+v, want (2,2) then (3,4)", got)
 	}
-	got = retrieve(outlines, tokenize("standalone"), 5)
+	got = retrieve(outlines, tokenize("standalone"), 5, false, false)
 	if len(got) != 1 || got[0].Line != 5 || got[0].End != 5 {
 		t.Fatalf("standalone = %+v, want line 5 end 5", got)
 	}
@@ -254,7 +263,7 @@ func TestRetrieveFromExtractor(t *testing.T) {
 		t.Fatal(err)
 	}
 	outlines := []*Outline{outline}
-	got := retrieve(outlines, tokenize("authenticate user"), 5)
+	got := retrieve(outlines, tokenize("authenticate user"), 5, false, false)
 	if len(got) != 1 {
 		t.Fatalf("got %+v, want one match", got)
 	}
@@ -266,8 +275,93 @@ func TestRetrieveFromExtractor(t *testing.T) {
 		t.Errorf("parents = %q, want %q", result.Parents, want)
 	}
 
-	got = retrieve(outlines, tokenize("manager"), 5)
+	got = retrieve(outlines, tokenize("manager"), 5, false, false)
 	if len(got) != 1 || len(got[0].Parents) != 0 {
 		t.Errorf("manager query returned %+v, want one top-level match", got)
+	}
+}
+
+// Short query terms (under 3 letters) are dropped by the query filter:
+// a 1-2 letter term is too generic to search on ("pp" from
+// "pp_settings" would match every "pp_*" identifier).
+func TestFilterQueryTermsShortTerms(t *testing.T) {
+	got := filterQueryTerms(tokenize("pp_settings.json"))
+	want := []string{"settings", "json"}
+	if !slices.Equal(got, want) {
+		t.Errorf("filterQueryTerms(pp_settings.json) = %v, want %v", got, want)
+	}
+	got = filterQueryTerms(tokenize("go sort"))
+	if !slices.Equal(got, []string{"sort"}) {
+		t.Errorf("filterQueryTerms(go sort) = %v, want [sort]", got)
+	}
+}
+
+// A query term that appears verbatim in the line earns a substring
+// bonus on top of BM25, so an exact identifier outranks a line that
+// merely shares a word with it.
+func TestRetrieveSubstringBonus(t *testing.T) {
+	outlines := []*Outline{{File: "warn.ps1", Nodes: []*Node{
+		{Line: 1, Text: "Write-Warning $warningMessage"},
+		{Line: 2, Text: "$warningMessage = \"already exists\""},
+	}}}
+	got := retrieve(outlines, tokenize("Write-Warning"), 5, false, false)
+	if len(got) != 2 {
+		t.Fatalf("got %+v, want 2 results", got)
+	}
+	if got[0].Line != 1 {
+		t.Errorf("first result = %+v, want the exact Write-Warning call at line 1", got[0])
+	}
+	if got[0].Score <= got[1].Score {
+		t.Errorf("exact score %g should exceed near-miss score %g", got[0].Score, got[1].Score)
+	}
+}
+
+// With defOnly, only definitions are returned: a use of the same name
+// is filtered out even when it scores highly.
+func TestRetrieveDefOnly(t *testing.T) {
+	outlines := []*Outline{{File: "sort.go", Nodes: []*Node{
+		{Line: 1, Text: "func HeapSort(slice []int) []int {"},
+		{Line: 5, Text: "HeapSort(arr)"},
+	}}}
+	got := retrieve(outlines, tokenize("heapsort"), 5, true, false)
+	if len(got) != 1 || got[0].Line != 1 {
+		t.Errorf("defOnly retrieve = %+v, want only the definition at line 1", got)
+	}
+	got = retrieve(outlines, tokenize("heapsort"), 5, false, false)
+	if len(got) != 2 {
+		t.Errorf("retrieve without defOnly = %+v, want both results", got)
+	}
+}
+
+// Per-file mode keeps only the best result from each file, so one
+// file cannot fill the whole top-N list and push other files out.
+func TestRetrievePerFile(t *testing.T) {
+	outlines := []*Outline{
+		{File: "a.go", Nodes: []*Node{
+			{Line: 1, Text: "func HeapSort()"},
+			{Line: 5, Text: "HeapSort(arr)"},
+		}},
+		{File: "b.go", Nodes: []*Node{
+			{Line: 1, Text: "func heapify()"},
+		}},
+	}
+	got := retrieve(outlines, tokenize("heapsort heapify"), 5, false, true)
+	if len(got) != 2 {
+		t.Fatalf("per-file retrieve = %+v, want one result per file", got)
+	}
+	// One result per file, in score order (b.go's rarer "heapify"
+	// outscores a.go's "heapsort" — the order is BM25, the dedup is
+	// what matters). a.go's kept result is its definition, not the call.
+	byFile := make(map[string]retrievalResult)
+	for _, r := range got {
+		byFile[r.File] = r
+	}
+	if len(byFile) != 2 || byFile["a.go"].Line != 1 || byFile["b.go"].Line != 1 {
+		t.Errorf("per-file retrieve = %+v, want a.go line 1 and b.go line 1", got)
+	}
+	// Without per-file, the same query returns all three matches.
+	got = retrieve(outlines, tokenize("heapsort heapify"), 5, false, false)
+	if len(got) != 3 {
+		t.Errorf("retrieve without per-file = %+v, want all 3 results", got)
 	}
 }

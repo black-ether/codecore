@@ -26,6 +26,8 @@ Flags:
                        single wrapper tag)
   --ask "query"        rank matching outline lines at any depth
   --top N              maximum results for --ask (default 5)
+  --def-only           with --ask, return definitions only
+  --per-file           with --ask, return the best match per file only
   -h, --help           show this help
 
 With no arguments, this help is shown. Flags come before paths.
@@ -71,6 +73,8 @@ func run(args []string) int {
 	langFlag := fs.String("lang", "auto", "language name or auto")
 	askFlag := fs.String("ask", "", "rank matching outline lines")
 	topFlag := fs.Int("top", 5, "maximum results for --ask")
+	defOnlyFlag := fs.Bool("def-only", false, "only definitions for --ask")
+	perFileFlag := fs.Bool("per-file", false, "best match per file for --ask")
 	// -1 means "not specified": the language's default depth is used
 	// (0 for most languages, 2 for HTML/XML). An explicit --depth 0
 	// still shows only the top level.
@@ -155,7 +159,7 @@ func run(args []string) int {
 	}
 
 	if *askFlag != "" {
-		results := retrieve(outlines, terms, *topFlag)
+		results := retrieve(outlines, terms, *topFlag, *defOnlyFlag, *perFileFlag)
 		err = formatResults(os.Stdout, *formatFlag, *askFlag, results)
 	} else {
 		err = fmtr.Format(os.Stdout, outlines)
