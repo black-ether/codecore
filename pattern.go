@@ -143,7 +143,11 @@ func tokenizeCode(src []byte, lang string) []token {
 				end += width
 			}
 			if kind == tokIdent {
-				switch word := s[:end]; {
+				word := s[:end]
+				if words.foldCase {
+					word = strings.ToUpper(word)
+				}
+				switch {
 				case words.keywords[word]:
 					kind = tokKeyword
 				case words.types[word]:
@@ -421,15 +425,29 @@ func findPatternMatches(file string, src []byte, atoms []atom, tokens []token) [
 
 // patternMatches lets the CLI stop as soon as it detects the first
 // match beyond the cap, even when a single file has many matches.
+// A single-token pattern (KEY, TYP, or any one-atom pattern) matches
+// at every token position, so a line with two keywords would
+// otherwise appear twice with identical text; those identical spans
+// are yielded once. Multi-token matches are never deduped: overlapping
+// matches such as `_1 = _1` on `x = x = x` are distinct results even
+// when they share a line.
 func patternMatches(file string, src []byte, atoms []atom, tokens []token) iter.Seq[patternResult] {
 	return func(yield func(patternResult) bool) {
 		lines := splitLines(src)
+		seen := make(map[[2]int]bool)
 		for i := range tokens {
 			end, ok := matchAtoms(atoms, tokens, i, nil)
 			if !ok || end <= i {
 				continue
 			}
 			first, last := tokens[i].line, tokens[end-1].line
+			if end == i+1 {
+				span := [2]int{first, last}
+				if seen[span] {
+					continue
+				}
+				seen[span] = true
+			}
 			if !yield(patternResult{File: file, Line: first, End: last, Text: strings.Join(lines[first-1:last], "\n")}) {
 				return
 			}

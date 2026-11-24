@@ -1,9 +1,13 @@
 package main
 
 // langWords holds the keyword and native-type sets for one language.
+// foldCase is for languages whose keywords are case-insensitive
+// (SQL): the word is upper-cased before lookup, so lowercase
+// `select` classifies the same as `SELECT`.
 type langWords struct {
 	keywords map[string]bool
 	types    map[string]bool
+	foldCase bool
 }
 
 // keywordTable uses extractor language names. Words absent from both sets
@@ -419,6 +423,7 @@ var keywordTable = map[string]langWords{
 		},
 	},
 	"sql": {
+		foldCase: true,
 		keywords: map[string]bool{
 			"ALL": true, "ALTER": true, "AND": true, "AS": true, "BEGIN": true,
 			"BETWEEN": true, "BY": true, "CASE": true, "COMMIT": true, "CREATE": true,

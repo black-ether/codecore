@@ -153,42 +153,68 @@ the match.
 `--pattern` searches source tokens at every position, including overlapping
 matches. Results follow file and source order. Use `--format json` for structured
 line ranges and source text. Text output shows multiline matches on one line,
-with line breaks displayed as `\n`.
+with line breaks displayed as `\n`. Each distinct line range is reported once,
+even if several token positions match on it (so `--pattern 'KEY'` lists a line
+with two keywords once, not twice).
 
-- Exact tokens are case-sensitive. Exact words match by text across identifiers,
-  keywords, and native types. Quoted strings compare their trimmed contents
-  across quote styles.
-- `ANY` matches any token, `OP` an operator, `NUM` a number, `OCT` a
-  number starting with zero and a digit, `HEX` a number starting with
-  `0x` or `0X`, `STR` a string, and `LIT` a number or string.
-- `_` matches any word token. Repeating a numbered placeholder such as
-  `_1` requires the same word. Prefix a special word or placeholder
-  with an underscore to match it literally, as in `_ANY` or `__1`.
-- `NOT` negates the next atom and `OR` joins single-token alternatives.
-  `...` skips up to 64 tokens, stops at unmatched closing brackets and
-  top-level semicolons, and tries the shortest match first.
+### Syntax
+
+A pattern is a sequence of atoms separated by spaces. Atoms match one token
+each, except `...`, which skips tokens.
+
+| Atom | Matches |
+| --- | --- |
+| `word` | An exact word, case-sensitive. Matches by text across identifiers, keywords, and native types, so `if` finds the keyword `if` and `int` finds the type `int`. |
+| `"text"` | An exact string, compared by its trimmed contents across quote styles, so `"hello"` matches `'hello'` and `` `hello` ``. |
+| `123`, `0x1F` | An exact number or operator, e.g. `=`, `+`, `(`, `;`. |
+| `ANY` | Any single token. |
+| `KEY` | Any keyword in the source file's language. |
+| `TYP` | Any native type in the source file's language. |
+| `OP` | Any operator. |
+| `NUM` | Any number. `OCT` is a number starting with zero and a digit; `HEX` starts with `0x` or `0X`. |
+| `STR` | Any string. `LIT` is a string or a number. |
+| `_` | Any word token (identifier, keyword, or native type). |
+| `_1`, `_2`, ... | A numbered placeholder: the first use binds it to a word, and every later use of the same number must be the same word. `_1 = _1` finds self-assignments. |
+| `NOT <atom>` | Negates the next atom: it consumes one token that does NOT match the atom. `_ = NOT STR` matches assignments to anything but a string. |
+| `<atom> OR <atom>` | Either single-token alternative. Right-associative: `A OR B OR C` means `A OR (B OR C)`. |
+| `...` | Skips tokens, trying the shortest match first. Stops at an unmatched closing bracket and at a top-level `;`, and skips at most 64 tokens. `func _ ( ... )` finds a function header with any parameters. |
+
+To match a special word literally, prefix it with an underscore: `_ANY`
+matches the word `ANY`, `__1` matches the word `_1`. To match the words
+`NOT`, `OR`, `KEY`, `TYP`, `OP`, `NUM`, `STR`, `LIT`, `OCT`, or `HEX`
+literally, write them the same way (`_KEY`, `_TYP`, ...).
 
 ```sh
 codecore --pattern '_1 = _1' source.go
 codecore --pattern 'func _ ( ... )' testdata/sample.go
 codecore --pattern '_ = NOT STR' source.go
-```
-
-`KEY` matches a keyword and `TYP` matches a native type using the source
-file's language.
-
-```sh
 codecore --pattern 'KEY _ ( ... )' testdata/sample.go  # keyword followed by a name and parentheses
 codecore --pattern 'TYP _ = ...' source.c              # typed declaration with an initializer
+codecore --pattern '_1 ( ... ) OR _1 = ...' source.go  # a call, or an assignment
 ```
 
-Pattern search skips `//`, `/* */`, `#`, and `--` comments —
-except a `#` at the start of a line followed by a preprocessor keyword
-(`include`, `define`, `ifdef`, ...), which is code, not a comment, so
-`--pattern 'FOO'` finds both `#define FOO 1` and its uses. `%` comments
-and docstrings remain in the token stream. You can combine `--pattern` with
-`--no-tests`. The CLI reports the first 1000 matches and warns if it finds
-more. Choose either `--pattern` or `--ask` for each invocation.
+### What the pattern sees
+
+Pattern search tokenizes the source and skips `//`, `/* */`, `#`, and `--`
+comments — except a `#` at the start of a line followed by a preprocessor
+keyword (`include`, `define`, `ifdef`, ...), which is code, not a comment, so
+`--pattern 'FOO'` finds both `#define FOO 1` and its uses. `%` comments and
+docstrings remain in the token stream. `KEY` and `TYP` use the source file's
+language (from its extension); a file with no registered language has no
+keywords, so `KEY` and `TYP` match nothing there. SQL keywords are matched
+case-insensitively, so `KEY` finds both `SELECT` and `select`; every other
+language is case-sensitive.
+
+You can combine `--pattern` with `--no-tests`. The CLI reports the first 1000
+matches and warns if it finds more. Choose either `--pattern` or `--ask` for
+each invocation.
+
+### Pattern vs ask
+
+`--ask` ranks outline lines by name or topic ("where is auth handled") and
+returns the best few. `--pattern` finds every line shaped a certain way
+("every self-assignment", "every typed declaration") and returns them all.
+Use `--ask` for a name or topic, `--pattern` for a shape.
 
 ## Design
 

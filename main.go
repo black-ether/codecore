@@ -48,11 +48,20 @@ Every code line is shown; a line that opens a multi-line block shows
 its contents nested underneath it. There are no kind labels and no
 parsing: the outline is the file's lines, nested by their blocks.
 
-Pattern search uses exact tokens and wildcards such as ANY, NUM, and
-STR. Use _ for any identifier, _1 for a repeated identifier, ... to
-skip balanced tokens, NOT to negate an atom, and OR for alternatives.
-For example, "_1 = _1" finds self-assignments and "func _ ( ... )"
-finds function definitions with any parameters.
+Pattern search (--pattern) matches a sequence of atoms, one token
+each, separated by spaces. Exact words match by text across
+identifiers, keywords, and native types; quoted strings compare
+their contents across quote styles. Wildcards: ANY (any token),
+KEY (any keyword), TYP (any native type), OP (operator), NUM
+(number), STR (string), LIT (string or number). _ matches any word;
+_1, _2, ... bind a word and must repeat it (_1 = _1 finds
+self-assignments). NOT negates the next atom; OR joins
+single-token alternatives. ... skips tokens (shortest first, at
+most 64, stops at unmatched closers and top-level ;). Prefix a
+special word with _ to match it literally (_ANY, _KEY). Examples:
+"func _ ( ... )" finds function headers; "_ = NOT STR" finds
+assignments to anything but a string. See README.md for the full
+syntax table. Use --ask for a name or topic, --pattern for a shape.
 
 Output (text):
   [L:4]  package sample

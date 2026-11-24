@@ -226,6 +226,13 @@ func TestTokenizeCodeKeywords(t *testing.T) {
 		{"python", "true print int", map[string]tokenKind{
 			"true": tokIdent, "print": tokIdent, "int": tokNativeType,
 		}},
+		{"sql", "select * from t where x = 1", map[string]tokenKind{
+			"select": tokKeyword, "from": tokKeyword, "where": tokKeyword,
+			"t": tokIdent, "x": tokIdent, "1": tokNumber,
+		}},
+		{"sql", "Select * FrOm t", map[string]tokenKind{
+			"Select": tokKeyword, "FrOm": tokKeyword, "t": tokIdent,
+		}},
 		{"json", "true null", map[string]tokenKind{"true": tokIdent, "null": tokIdent}},
 		{"unknown", "if int", map[string]tokenKind{"if": tokIdent, "int": tokIdent}},
 	} {
@@ -246,6 +253,24 @@ func TestKeywordTableLanguages(t *testing.T) {
 		if _, ok := keywordTable[lang]; !ok {
 			t.Errorf("missing keyword table entry for %q", lang)
 		}
+	}
+}
+
+// TestPatternMatchesDedup: a single-token pattern matches at every
+// token position, so a line with two keywords (type and func) would
+// yield the same line twice. Identical spans are reported once.
+func TestPatternMatchesDedup(t *testing.T) {
+	src := []byte("type Handler func(w http.ResponseWriter, r *http.Request)")
+	got := findPatternMatches("sample.go", src, mustParsePattern(t, "KEY"), tokenizeCode(src, "go"))
+	if len(got) != 1 {
+		t.Errorf("KEY matches = %d, want 1 (got %#v)", len(got), got)
+	}
+	// A line with one keyword still yields one match, and a line with
+	// three type tokens yields one match too.
+	src = []byte("func Map[T any, U any](in []T, f func(T) U) []U {")
+	got = findPatternMatches("sample.go", src, mustParsePattern(t, "TYP"), tokenizeCode(src, "go"))
+	if len(got) != 1 {
+		t.Errorf("TYP matches = %d, want 1 (got %#v)", len(got), got)
 	}
 }
 

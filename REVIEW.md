@@ -680,7 +680,9 @@ At `--depth 99`, the outline counts were 34 for `sample.py`, 42 for
 The keyword table covers all 35 extractor languages, with empty sets for
 HTML, XML, YAML, JSON, CSS, and plain text. Each file uses its extractor's
 language to classify words for `KEY` and `TYP`. Table lookups match source
-spelling case-sensitively.
+spelling case-sensitively, except SQL: its `foldCase` flag upper-cases the
+word before lookup, so lowercase `select` classifies the same as `SELECT`
+(SQL is case-insensitive; every other language is case-sensitive).
 
 The CLI parses the pattern once without a language so it can reuse the
 same atoms across files. Exact words compare by text across identifiers,
@@ -688,6 +690,36 @@ keywords, and native types. This lets a literal `if` in the pattern match
 a Go keyword token. Placeholders continue to match any word token.
 
 On `testdata/sample.go`, `KEY` returned 29 matches and `TYP` returned 11.
+
+### Fixes after Phase 2 (2026-11-24)
+
+Two gaps found during verification, both fixed and pushed with the docs:
+
+1. **Duplicate lines for single-token patterns.** `patternMatches` yielded
+   one result per matching token position, so a line with two keywords
+   appeared twice for `--pattern 'KEY'`. It now dedups identical line
+   spans, but only for single-token matches (a `seen` set keyed on
+   `[line, end]`): multi-token overlapping matches such as `_1 = _1`
+   on `x = x = x` are distinct results and are still reported twice.
+   `KEY` on sample.go now returns 19 matches (was 29 with duplicates);
+   `TYP` returns 9 (was 11). The first version deduped all matches and
+   broke the overlapping-matches test; the single-token rule is the fix.
+2. **SQL lowercase keywords.** The SQL table was uppercase-only and the
+   lookup case-sensitive, so lowercase `select`/`from`/`where` did not
+   classify as `KEY`. The `langWords.foldCase` flag (SQL only) upper-cases
+   the word before lookup, so all casings classify.
+
+### Pattern syntax documentation (2026-11-24)
+
+The README's pattern section was rewritten as a full syntax reference:
+a table of every atom (exact words/strings/numbers/operators, ANY, KEY,
+TYP, OP, NUM, OCT, HEX, STR, LIT, `_`, `_1`/`_2`, NOT, OR, `...`),
+the literal-escaping rule (`_ANY`, `_KEY`, `__1`), worked examples, a
+"What the pattern sees" section (comments, preprocessor `#`, per-file
+language, SQL case-insensitivity, 1000-match cap), and a "Pattern vs
+ask" paragraph (ask = name/topic, ranked top-N; pattern = shape,
+exhaustive). The `--help` text carries a condensed version of the
+same reference and points to the README for the full table.
 Each result corresponds to one token, so lines with multiple matching
 tokens appear more than once. The exact `if` search returned zero
 matches on that file because it contains no `if` token. The same
