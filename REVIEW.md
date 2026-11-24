@@ -728,3 +728,91 @@ search returned one match on a Go snippet containing `if ok { return }`.
 At `--depth 99`, the fixture outputs matched the baseline byte for byte,
 with 34 nodes for `sample.py`, 42 for `sample.go`, 28 for `sample.ps1`,
 and 1494 for `pp.ps1`.
+
+## 16. Short-query regression and receiver-method names (2026-11-24)
+
+Two gaps found by a background re-check of the retrieval fixes
+(§10–§11), both fixed locally and NOT yet pushed (Jo: "no push yet").
+
+### Short queries failed outright
+
+`filterQueryTerms` dropped every term under 3 letters, so `--ask
+"go"`, `--ask "id"`, and `--ask "C"` all failed with `codecore:
+--ask query must contain a searchable term` (exit 2). Any legitimate
+1–2 letter identifier was unsearchable. The regression shipped in
+commit 5faa0b31 (the batch 1+2 push) before it was noticed.
+
+Fix: short terms are now dropped only when a longer term survives.
+A short term is usually a fragment of a compound name (the "pp" in
+"pp_settings.json"), but when the whole query is short the short
+terms ARE the query. `filterQueryTerms` now removes stopwords first,
+then drops sub-3-letter terms only if a 3+ letter term remains.
+`--ask "go"` returns results (exit 0); `pp_settings.json` still
+drops "pp" (correct line still #1, 21.39); a stopwords-only query
+("where is it") still errors. A surviving short term matches exactly
+only — prefix matching and the substring bonus already skip terms
+under 3 letters, so "go" finds `go serve()` without the prefix noise
+that made "pp" match `pp_commands`.
+
+### Receiver methods had no name
+
+`extractName` returned ("", false) for `func (h *MaxHeap)
+Init(slice []Comparable) {`: the prefix before the first `(` is just
+"func", a definition keyword, so no usable name was found — and the
+fall-through `return "", false` discarded the isDef that had already
+been computed. Consequences, both verified live: the method got no
+name boost (score 3.64 vs 4.14 for a plain `func HeapSort`), and
+`--def-only` dropped it entirely ("no matches" for `--ask "Init"
+--def-only`) — worse than the re-check assumed, which said isDef was
+still true.
+
+Fix: when no name is found in the prefix and the first delimiter is
+"(" on a definition header, `extractName` skips the receiver
+(matching parens) and takes the first identifier after the closing
+")" as the name, returning it with the already-computed isDef. The
+name is the method name alone ("Init"), not the receiver type. Now
+`--ask "Init"` scores 4.04, `--def-only` finds it, and JSON carries
+`"name": "Init"`. TestExtractName's receiver case changed from ("",
+false) to ("Method", true), with two more cases added
+(`(h *MaxHeap) Init`, `(s Server) Addr`).
+
+Tests: TestFilterQueryTermsShortTerms gained single-short-query cases
+("go" → ["go"], "C" → ["c"]); TestExtractName gained the receiver
+cases. gofmt/vet/test/race pass; fixtures unchanged 34/42/28/1494.
+
+## 17. Substring bonus is whole-word only (2026-11-24)
+
+Jo: "Yes fix it if you think it's better to do so" — the third issue
+from the 13:03 re-check, left open when the other two were fixed in
+§16. The substring bonus (+3.0 per term) used a plain substring
+check in normal mode, so "auth" collected it on "author" lines
+("<author>Else</author>" 13.08, "\"author\": {" 12.74,
+"\\author{...}" 11.59) and outranked the genuinely relevant
+"Authenticode" line (8.40). Only --word mode used the whole-word
+`containsWord` helper.
+
+Fix: the bonus now uses `containsWord` in every mode — a term earns
+it only when it appears as a whole word (a token) in the line. A
+term that only prefixes a longer word ("auth" in "authenticate")
+still scores through BM25 prefix matching; the bonus is reserved
+for the exact word, which is what it was built for (Write-Warning
+outranking a line that merely contains "warning").
+
+Honest limit, measured live: the author lines dropped to
+10.65/10.18/9.13 (they lost the +3.0) but still outrank the
+Authenticode line (6.01, also down from 8.40 — it lost its bonus
+too, since "auth" is not a whole word in "Authenticode"). The
+remaining gap is BM25 length normalisation, not the bonus: both are
+4-letter prefix matches and the author lines are shorter documents.
+BM25 cannot tell "author" from "Authenticode" — that would need
+semantics, which is out of scope. The Authenticode line stays in the
+top 5, and the bonus no longer inflates partial-word matches.
+
+Tests: TestRetrieveSubstringBonusWholeWord (two equal-length lines,
+"auth Else" vs "<author>Else</author>"; the whole-word line must
+win — an earlier version of the test also asserted the author line
+ranked last, which failed because BM25 length effects put the short
+author line above the longer Authenticode line; the test now asserts
+only what the bonus guarantees). The existing Write-Warning test
+still passes. gofmt/vet/test/race pass; fixtures unchanged
+34/42/28/1494. NOT PUSHED (same unpushed batch as §16).

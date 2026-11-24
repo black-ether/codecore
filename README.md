@@ -111,12 +111,21 @@ outline lines belonging to the block, not the closer. Matching uses
 case-insensitive letter and digit tokens. A query term of 3 or more
 letters also matches any longer term it prefixes, so `auth` finds
 `authenticate`; shorter terms match exactly only. Query terms under
-3 letters are dropped entirely — a 1-2 letter term is too generic
-to search on ("pp" would match every "pp_*" identifier). A query
-term that appears verbatim in the line earns a substring bonus on
-top of BM25, so an exact identifier like `Write-Warning` outranks
-a line that merely contains the word "warning". Use `--def-only`
-with `--ask` to return definitions only, filtering out calls and
+3 letters are dropped when a longer term is also present — a 1-2
+letter term is usually a fragment of a compound name ("pp" from
+`pp_settings.json` would match every "pp_*" identifier). But when
+the whole query is short (`--ask "go"`, `--ask "id"`), the short
+terms are kept: they ARE the query, and dropping them made those
+queries fail outright. A query term that appears verbatim in the
+line earns a substring bonus on top of BM25, so an exact identifier
+like `Write-Warning` outranks a line that merely contains the word
+"warning". The bonus is whole-word only: a term that is merely a
+prefix or substring of a longer word ("auth" inside "author") does
+not earn it, or author lines would outrank the genuinely relevant
+"Authenticode" line. Use `--def-only` with `--ask` to return
+definitions only, filtering out calls and assignments; a Go method
+with a receiver (`func (h *MaxHeap) Init(...)`) is named "Init" and
+counts as a definition.
 uses of the same name. Use `--per-file` with `--ask` to return only
 the best match from each file, so one file cannot fill the whole
 top-N list and hide other files — for a repo-wide "which files

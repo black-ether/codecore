@@ -57,17 +57,39 @@ var queryStopwords = map[string]bool{
 // too generic to search on (e.g. "pp" from "pp_settings" would match
 // every "pp_*" identifier). Dropping them here, in the query filter
 // only, keeps short tokens in the code index untouched.
+// filterQueryTerms drops stopwords, and drops terms under 3 letters
+// only when a longer term survives. A short term is usually a
+// fragment of a compound name (the "pp" in "pp_settings.json" matched
+// every pp_* identifier), but when the whole query is short ("go",
+// "id", "C") the short terms ARE the query, and dropping them made
+// those queries fail outright. A short term that survives matches
+// exactly only: prefix matching and the substring bonus both skip
+// terms under 3 letters, so "go" finds "go" but "pp" alone does not
+// gain the prefix expansion that made it noisy.
 func filterQueryTerms(terms []string) []string {
-	kept := terms[:0]
+	var kept []string
 	for _, term := range terms {
-		if len(term) < 3 {
-			continue
-		}
 		if !queryStopwords[term] {
 			kept = append(kept, term)
 		}
 	}
-	return kept
+	hasLong := false
+	for _, term := range kept {
+		if len(term) >= 3 {
+			hasLong = true
+			break
+		}
+	}
+	if !hasLong {
+		return kept
+	}
+	out := make([]string, 0, len(kept))
+	for _, term := range kept {
+		if len(term) >= 3 {
+			out = append(out, term)
+		}
+	}
+	return out
 }
 
 // prefixMatches returns, for a query term, the documents containing it
@@ -245,11 +267,12 @@ func extractName(text string) (string, bool) {
 	}
 	// The name is the last identifier, skipping definition keywords
 	// (a Go method with a receiver lands on "func" and has no earlier
-	// identifier to fall back to, so it has no usable name), extended
-	// backwards over ".identifier" segments (a method keeps its dotted
-	// path) and over "-identifier" segments (a kebab-case name like
-	// lazy-heap-sort keeps its hyphens; the hyphen must sit between
-	// two identifier characters, so "a - b" does not extend).
+	// identifier to fall back to, so it has no usable name — see the
+	// receiver check below), extended backwards over ".identifier"
+	// segments (a method keeps its dotted path) and over "-identifier"
+	// segments (a kebab-case name like lazy-heap-sort keeps its
+	// hyphens; the hyphen must sit between two identifier characters,
+	// so "a - b" does not extend).
 	for i := len(ids) - 1; i >= 0; i-- {
 		if definitionKeywords[strings.ToLower(ids[i].text)] {
 			continue
@@ -278,6 +301,37 @@ func extractName(text string) (string, bool) {
 			pos = e
 		}
 		return name, isDef
+	}
+	// A method with a receiver: the prefix is just the definition
+	// keyword ("func") and the method name hides behind the
+	// parenthesised receiver, so no name was found above. When the
+	// first delimiter is "(" on a definition header, skip the receiver
+	// (matching parens) and take the first identifier after it. The
+	// name is the method name alone ("Init"), not the receiver type —
+	// enough for the name boost and for --def-only to keep it.
+	if isDefHeader && end < len(runes) && runes[end] == '(' {
+		depth := 0
+		for i := end; i < len(runes); i++ {
+			if runes[i] == '(' {
+				depth++
+			} else if runes[i] == ')' {
+				depth--
+				if depth == 0 {
+					j := i + 1
+					for j < len(runes) && !unicode.IsLetter(runes[j]) && runes[j] != '_' {
+						j++
+					}
+					k := j
+					for k < len(runes) && (unicode.IsLetter(runes[k]) || unicode.IsDigit(runes[k]) || runes[k] == '_') {
+						k++
+					}
+					if j < k {
+						return string(runes[j:k]), isDef
+					}
+					break
+				}
+			}
+		}
 	}
 	return "", false
 }
@@ -355,13 +409,17 @@ func allMatches(outlines []*Outline, terms []string, defOnly bool, wordOnly bool
 		return results
 	}
 	const k1, b = 1.2, 0.75
-	// substringBonus rewards a query term that appears verbatim (as a
-	// substring) in the node's line, so an exact identifier like
-	// Write-Warning outranks a line that merely contains the word
-	// "warning". Applied once per term per document, on top of BM25,
-	// whether or not the term matched as a token. In --word mode the
-	// bonus is whole-word only, so a line containing only "reader"
-	// does not earn it for "read".
+	// substringBonus rewards a query term that appears as a whole word
+	// in the node's line, so an exact identifier like Write-Warning
+	// outranks a line that merely contains the word "warning". Applied
+	// once per term per document, on top of BM25, whether or not the
+	// term matched as a token. It is whole-word only in every mode:
+	// a plain substring check also rewarded partial-word matches, so
+	// "auth" collected the bonus on "author" lines ("<author>Else")
+	// and outranked the genuinely relevant "Authenticode" line. A
+	// term that only prefixes a longer word ("auth" in
+	// "authenticate") still scores through BM25 prefix matching; the
+	// bonus is reserved for the exact word.
 	const substringBonus = 3.0
 	n := float64(len(documents))
 	avgdl := float64(totalLength) / n
@@ -387,11 +445,7 @@ func allMatches(outlines []*Outline, terms []string, defOnly bool, wordOnly bool
 			if len(term) < 3 {
 				continue
 			}
-			if wordOnly {
-				if containsWord(doc.lowerText, term) {
-					scores[i] += substringBonus
-				}
-			} else if strings.Contains(doc.lowerText, term) {
+			if containsWord(doc.lowerText, term) {
 				scores[i] += substringBonus
 			}
 		}

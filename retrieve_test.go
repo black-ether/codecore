@@ -90,7 +90,9 @@ func TestExtractName(t *testing.T) {
 		{"function keymap.del(modes, lhs, opts)", "keymap.del", true},
 		{"type Foo struct {", "Foo", true},
 		{"type Bar interface {", "Bar", true},
-		{"func (r *Receiver) Method()", "", false},
+		{"func (r *Receiver) Method()", "Method", true},
+		{"func (h *MaxHeap) Init(slice []Comparable) {", "Init", true},
+		{"func (s Server) Addr() string", "Addr", true},
 		{"if x > 0:", "x", false},
 		{"if x == y:", "x", false},
 		{"x = authenticate_user()", "x", true},
@@ -294,6 +296,16 @@ func TestFilterQueryTermsShortTerms(t *testing.T) {
 	if !slices.Equal(got, []string{"sort"}) {
 		t.Errorf("filterQueryTerms(go sort) = %v, want [sort]", got)
 	}
+	// A query that is only short terms keeps them: "go" is the whole
+	// query, not a fragment of a compound name, so it must not error.
+	got = filterQueryTerms(tokenize("go"))
+	if !slices.Equal(got, []string{"go"}) {
+		t.Errorf("filterQueryTerms(go) = %v, want [go]", got)
+	}
+	got = filterQueryTerms(tokenize("C"))
+	if !slices.Equal(got, []string{"c"}) {
+		t.Errorf("filterQueryTerms(C) = %v, want [c]", got)
+	}
 }
 
 // A query term that appears verbatim in the line earns a substring
@@ -313,6 +325,26 @@ func TestRetrieveSubstringBonus(t *testing.T) {
 	}
 	if got[0].Score <= got[1].Score {
 		t.Errorf("exact score %g should exceed near-miss score %g", got[0].Score, got[1].Score)
+	}
+}
+
+// The substring bonus is whole-word only: a term that is merely a
+// prefix or substring of a longer word ("auth" in "author") must not
+// earn it, or author lines outrank the genuinely relevant
+// "Authenticode" line. The two lines below have the same token count,
+// so BM25 length normalisation cannot decide between them — only the
+// bonus can, and the whole-word line must win.
+func TestRetrieveSubstringBonusWholeWord(t *testing.T) {
+	outlines := []*Outline{{File: "auth.txt", Nodes: []*Node{
+		{Line: 1, Text: "<author>Else</author>"},
+		{Line: 2, Text: "auth Else"},
+	}}}
+	got := retrieve(outlines, tokenize("auth"), 5, false, false, false)
+	if len(got) != 2 {
+		t.Fatalf("got %+v, want 2 results", got)
+	}
+	if got[0].Line != 2 {
+		t.Errorf("first result = %+v, want the exact-word line 2 first", got[0])
 	}
 }
 
