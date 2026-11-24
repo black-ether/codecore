@@ -36,6 +36,10 @@ Flags must come BEFORE the paths. Go flag parsing stops at the first positional 
 ~/go/bin/codecore --lang <name> <file>    # force a language parser (e.g. --lang python)
 ~/go/bin/codecore --ask "query" [paths]   # rank matching outline lines (BM25), top 5 by default
 ~/go/bin/codecore --ask "query" --top 10 <dir>   # top 10 results, repo-wide when given a directory
+~/go/bin/codecore --ask "query" --no-tests <dir> # exclude test files from a repo-wide search
+~/go/bin/codecore --ask "query" --word <dir>     # whole-word matching only (no prefix matching)
+~/go/bin/codecore --ask "query" --filename-only <dir>  # print only the names of files with matches
+~/go/bin/codecore --ask "query" --count <dir>     # print match counts per file
 ```
 
 A directory argument is walked recursively (sorted by path, overlapping inputs deduplicated). `.git`, `node_modules`, `__pycache__`, `.venv`, `vendor`, `target`, `dist`, and `build` are never descended into; files without a supported extension are skipped silently. A file passed directly is always kept.
@@ -46,9 +50,12 @@ A directory argument is walked recursively (sorted by path, overlapping inputs d
 
 - Query with code terms first: `codecore --ask "authenticate_user" src/` beats `codecore --ask "where is auth handled"`.
 - Question words (where, is, how, do, the, ...) are stripped automatically, but code terms rank better, so prefer them.
-- Prefix matching: a query term of 3+ letters matches any longer term it prefixes, so `auth` finds `authenticate`.
+- Prefix matching: a query term of 3+ letters matches any longer term it prefixes, so `auth` finds `authenticate`. Use `--word` when you want whole-word matching only (`read` must not match `reader`).
+- When you are looking for the implementation, not the tests, add `--no-tests`: test files call the implementation, so they rank high as uses and pollute repo-wide results. Leave it off when the question is about the tests themselves.
+- If results are only uses, add the defining word (`def`, `func`, `class`) or the type it works on, or use `--def-only` to return definitions only.
+- Use `--per-file` for a repo-wide "which files implement X" question, so one file cannot fill the whole top-N list.
+- Use `--filename-only` when you only need the file list, and `--count` when you need to know which files mention a term most.
 - If a term finds nothing, try a shorter prefix or a related word (`login`, `token`).
-- If results are only uses, add the defining word (`def`, `func`, `class`) or the type it works on.
 - Ask again with a narrower term rather than a longer sentence.
 - A query that is only stopwords errors out (exit 2). `--top` below 1 errors out (exit 2). No matches prints `no matches for "<query>"` and exits 0.
 
