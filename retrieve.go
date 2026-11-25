@@ -12,15 +12,16 @@ import (
 )
 
 type retrievalResult struct {
-	Rank    int             `json:"rank"`
-	File    string          `json:"file"`
-	Line    int             `json:"line"`
-	End     int             `json:"end"`
-	Name    string          `json:"name,omitempty"`
-	Text    string          `json:"text"`
-	Score   float64         `json:"score"`
-	Parents []string        `json:"parents,omitempty"`
-	Unit    *structuralUnit `json:"unit,omitempty"`
+	Explanation *rankingExplanation `json:"explanation,omitempty"`
+	Rank        int                 `json:"rank"`
+	File        string              `json:"file"`
+	Line        int                 `json:"line"`
+	End         int                 `json:"end"`
+	Name        string              `json:"name,omitempty"`
+	Text        string              `json:"text"`
+	Score       float64             `json:"score"`
+	Parents     []string            `json:"parents,omitempty"`
+	Unit        *structuralUnit     `json:"unit,omitempty"`
 }
 
 func tokenize(text string) []string {
@@ -139,6 +140,7 @@ func containsWord(text, term string) bool {
 
 type retrievalOptions struct {
 	splitIdentifiers bool
+	explainRanking   bool
 	groupStructure   bool
 	docPassages      map[string]map[int]passageLine
 }
@@ -153,6 +155,7 @@ type retrievalDocument struct {
 	isDef      bool
 	lowerText  string
 	wholeTerms []string
+	nameTerms  []string
 	unit       *structuralUnit
 }
 
@@ -422,7 +425,7 @@ func (opts retrievalOptions) allMatches(outlines []*Outline, terms []string, def
 			id := len(documents)
 			documents = append(documents, retrievalDocument{
 				file: outline.File, node: node, length: length, parents: parents, end: end,
-				name: name, isDef: isDef, lowerText: strings.ToLower(searchText), wholeTerms: wholeTerms, unit: unit,
+				name: name, nameTerms: nameTokens, isDef: isDef, lowerText: strings.ToLower(searchText), wholeTerms: wholeTerms, unit: unit,
 			})
 			totalLength += length
 			frequencies := make(map[string]int)
@@ -465,18 +468,26 @@ func (opts retrievalOptions) allMatches(outlines []*Outline, terms []string, def
 	n := float64(len(documents))
 	avgdl := float64(totalLength) / n
 	scores := make([]float64, len(documents))
+	var trace []rankingExplanation
+	if opts.explainRanking {
+		trace = make([]rankingExplanation, len(documents))
+	}
 	// Add scores in query order to keep floating-point sums deterministic.
 	// A query term matches the exact term and, when it is at least 3
 	// letters, any longer term it prefixes, so "auth" finds
 	// "authenticate" — unless --word is on.
 	for _, term := range terms {
 		matched := prefixMatches(postings, term, wordOnly)
-		if len(matched) > 0 {
-			df := float64(len(matched))
+		df := float64(len(matched))
+		if df > 0 {
 			idf := math.Log(1 + (n-df+0.5)/(df+0.5))
 			for doc, tf := range matched {
 				dl := float64(documents[doc].length)
-				scores[doc] += idf * (tf * (k1 + 1)) / (tf + k1*(1-b+b*dl/avgdl))
+				contribution := idf * (tf * (k1 + 1)) / (tf + k1*(1-b+b*dl/avgdl))
+				scores[doc] += contribution
+				if trace != nil {
+					trace[doc].Terms = append(trace[doc].Terms, rankingTerm{Term: term, TF: int(tf), DF: int(df), IDF: idf, BM25: contribution})
+				}
 			}
 		}
 		for i, doc := range documents {
@@ -489,6 +500,13 @@ func (opts retrievalOptions) allMatches(outlines []*Outline, terms []string, def
 			if (opts.splitIdentifiers && slices.Contains(doc.wholeTerms, term)) ||
 				(!opts.splitIdentifiers && containsWord(doc.lowerText, term)) {
 				scores[i] += substringBonus
+				if trace != nil {
+					if _, ok := matched[i]; ok {
+						trace[i].Terms[len(trace[i].Terms)-1].Bonus = substringBonus
+					} else {
+						trace[i].Terms = append(trace[i].Terms, rankingTerm{Term: term, DF: int(df), Bonus: substringBonus})
+					}
+				}
 			}
 		}
 	}
@@ -497,8 +515,22 @@ func (opts retrievalOptions) allMatches(outlines []*Outline, terms []string, def
 			if defOnly && !doc.isDef {
 				continue
 			}
+			var explanation *rankingExplanation
+			if trace != nil {
+				explanation = &trace[i]
+				explanation.DocumentLength = doc.length
+				explanation.MeanLength = avgdl
+				explanation.Documents = len(documents)
+				explanation.DefinitionTerms = doc.nameTerms
+				distinct := make(map[string]bool)
+				for _, detail := range explanation.Terms {
+					distinct[detail.Term] = true
+				}
+				explanation.Covered = len(distinct)
+			}
 			results = append(results, retrievalResult{
-				File: doc.file, Line: doc.node.Line, End: doc.end, Name: doc.name, Text: doc.node.Text,
+				Explanation: explanation,
+				File:        doc.file, Line: doc.node.Line, End: doc.end, Name: doc.name, Text: doc.node.Text,
 				Score: scores[i], Parents: doc.parents, Unit: doc.unit,
 			})
 		}

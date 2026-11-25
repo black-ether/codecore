@@ -33,6 +33,7 @@ Flags:
   --per-file           with --ask, return the best match per file only
   --word               with --ask, match whole words only (no prefix
                        matching, so "read" does not match "reader")
+  --explain-ranking    with --ask --format json, include score contributions
   --dedup-docs         with --ask, suppress identical Markdown passages across files
   --group-structure   with --ask, return the best match per structural unit
   --categories LIST   with --ask, include production,docs,tests,fixtures,generated
@@ -107,6 +108,7 @@ func run(args []string) int {
 	perFileFlag := fs.Bool("per-file", false, "best match per file for --ask")
 	splitIdentifiersFlag := fs.Bool("split-identifiers", false, "index compound identifier parts for --ask")
 	wordFlag := fs.Bool("word", false, "whole-word only for --ask (no prefix matching)")
+	explainRankingFlag := fs.Bool("explain-ranking", false, "include ranking diagnostics in JSON results")
 	dedupDocsFlag := fs.Bool("dedup-docs", false, "suppress duplicate Markdown passages for --ask")
 	groupStructureFlag := fs.Bool("group-structure", false, "group matches by enclosing structural unit for --ask")
 	categoriesFlag := fs.String("categories", "", "comma-separated source categories for --ask")
@@ -164,7 +166,11 @@ func run(args []string) int {
 			return 2
 		}
 	}
-	opts := retrievalOptions{splitIdentifiers: *splitIdentifiersFlag, groupStructure: *groupStructureFlag}
+	opts := retrievalOptions{splitIdentifiers: *splitIdentifiersFlag, groupStructure: *groupStructureFlag, explainRanking: *explainRankingFlag}
+	if opts.explainRanking && (*askFlag == "" || *formatFlag != "json" || *countFlag || *filenameOnlyFlag) {
+		fmt.Fprintln(os.Stderr, "codecore: --explain-ranking needs --ask --format json with ranked results")
+		return 2
+	}
 	if opts.groupStructure && (*askFlag == "" || *countFlag) {
 		fmt.Fprintln(os.Stderr, "codecore: --group-structure needs --ask and cannot be used with --count")
 		return 2
