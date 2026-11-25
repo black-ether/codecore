@@ -29,13 +29,10 @@ are rejected, not outlined as garbage).
 
 ## How it works
 
-codecore folds code blocks the way an editor's "fold all" does:
-indentation for Python, brackets for Go and PowerShell, tags for
-HTML and XML. Every code line is shown; a line that opens a
-multi-line block shows its contents nested underneath it. There are
-no kind labels and no parsing — the outline is the file's lines,
-nested by their blocks. That is the whole model, and it is the same
-for every language.
+Codecore folds blocks by indentation for Python, brackets for Go and
+PowerShell, and tags for HTML and XML. The outline nests retained source
+lines under their block headings. Go declaration ranges use physical
+positions from the Go parser.
 
 ## Output
 
@@ -44,37 +41,45 @@ line number, always at the far left and padded to the widest tag in
 the output so the lines line up; children are indented two spaces per
 level.
 
-By default the top level is shown — the big picture (HTML/XML show
-two levels, since their top level is a single wrapper tag). A line
-marked ` … (N more)` opens further, and N says how many outline lines
-hide inside it, so you can tell at a glance which blocks are worth
-opening. `--depth 1` shows one level inside each block, `--depth 2`
-two levels, and so on, one depth at a time. There is no way to dump
-the whole tree: that is the point of the tool — the big picture first,
-drill in only where it matters. JSON (`--format json`) is cut to the
-same depth, with `"hasMore": true` on the lines that hide more.
+By default the top level is shown. HTML and XML default to two levels.
+Use `--depth 1` to open one level inside each block and `--depth 2` to
+open two. A collapsed heading reports its **hidden outline rows**.
+Blank lines, comments and closing delimiters generally have no outline
+row, so the hidden count can differ from the source line count.
+
+A heading ends with `[source L:start-end]` when its multiline source
+boundary is known. Both line numbers are inclusive, and the range
+includes the closing delimiter. Go declaration ranges include the full
+signature and body. `[outline L:start-end]` identifies the span of
+retained rows when the extractor relies on indentation, and
+`[source L:start-?]` identifies an open block. Ranges stay the same
+at every depth.
+
+JSON retains `line` as the starting line. It adds `endLine` for a
+known source boundary or `outlineEndLine` for a span of retained rows.
+Collapsed nodes carry `"hasMore": true` and `hiddenRows`.
 
 ```
 [L:4]  package sample
-[L:6]  import ( … (4 more)
+[L:6]  import ( … (4 hidden outline rows) [source L:6-11]
 [L:13] import "strings"
-[L:15] const ( … (2 more)
-[L:21] var ( … (2 more)
-[L:34] type Config struct { … (4 more)
-[L:61] func Map[T any, U any](in []T, f func(T) U) []U { … (4 more)
-[L:75] func main() { … (6 more)
+[L:15] const ( … (2 hidden outline rows) [source L:15-19]
+[L:21] var ( … (2 hidden outline rows) [source L:21-25]
+[L:34] type Config struct { … (4 hidden outline rows) [source L:34-39]
+[L:61] func Map[T any, U any](in []T, f func(T) U) []U { … (4 hidden outline rows) [source L:61-67]
+[L:75] func main() { … (6 hidden outline rows) [source L:75-83]
 
 --depth 1 opens one level inside each block:
 
-[L:6]  import (
+[L:6]  import ( [source L:6-11]
 [L:7]    "fmt"
 [L:8]    "io"
-[L:34] type Config struct {
+[L:34] type Config struct { [source L:34-39]
 [L:35]   Port        int    `json:"port"`
 [L:36]   Host        string `json:"host"`
-[L:61] func Map[T any, U any](in []T, f func(T) U) []U {
+[L:61] func Map[T any, U any](in []T, f func(T) U) []U { [source L:61-67]
 [L:62]   out := make([]U, len(in))
-[L:63]   for i, v := range in { …
+[L:63]   for i, v := range in { … (1 hidden outline row) [source L:63-65]
 ```
 
 A line longer than 120 characters is capped with `…`; the full line

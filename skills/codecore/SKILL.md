@@ -61,7 +61,7 @@ A directory argument is walked recursively (sorted by path, overlapping inputs d
 
 ## Output
 
-Text output is one line per outline node: `[L:<line>] <source line>`, nested by indentation. A node with hidden descendants shows ` … (N more)`. In JSON, boundary nodes carry `"hasMore": true`.
+Text output keeps `[L:<line>]` on the left and indents children. A known inclusive source range appears at the end of a heading as `[source L:start-end]`. An `[outline L:start-end]` span covers retained outline rows, and `[source L:start-?]` marks an open block. The hidden outline row count measures collapsed rows. Use `end - start + 1` for the number of source lines in a known range. In JSON, read `line` and `endLine` for source bounds, `outlineEndLine` for a retained-row span, and `hiddenRows` for the collapsed count.
 
 ## What it does not do
 

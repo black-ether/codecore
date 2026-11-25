@@ -33,12 +33,12 @@ func TestTextFormatterDepth0(t *testing.T) {
 		t.Fatalf("depth-0 lines = %d, want 16:\n%v", len(lines), lines)
 	}
 	joined := strings.Join(lines, "\n")
-	// Block headers are marked " … (N more)" so you can tell they open
+	// Block headers are marked " … (N hidden outline rows)" so you can tell they open
 	// further, and how much hides inside them.
 	for _, want := range []string{
-		"import ( … (4 more)", "const ( … (2 more)", "var ( … (2 more)",
-		"type Config struct { … (4 more)", "func Map[T any, U any](in []T, f func(T) U) []U { … (4 more)",
-		"func main() { … (6 more)",
+		"import ( … (4 hidden outline rows)", "const ( … (2 hidden outline rows)", "var ( … (2 hidden outline rows)",
+		"type Config struct { … (4 hidden outline rows)", "func Map[T any, U any](in []T, f func(T) U) []U { … (4 hidden outline rows)",
+		"func main() { … (6 hidden outline rows)",
 	} {
 		if !strings.Contains(joined, want) {
 			t.Errorf("depth-0 output missing marked block header %q:\n%v", want, lines)
@@ -65,7 +65,7 @@ func TestTextFormatterDepth1(t *testing.T) {
 	}
 	// The for loop itself is a depth-1 block header, marked with how
 	// much hides inside it (its one body line).
-	if !strings.Contains(joined, "for i, v := range in { … (1 more)") {
+	if !strings.Contains(joined, "for i, v := range in { … (1 hidden outline row)") {
 		t.Errorf("depth-1 output missing the marked for-loop header:\n%v", lines)
 	}
 }
@@ -99,7 +99,7 @@ func TestTextFormatterPythonDepth0(t *testing.T) {
 	if !strings.Contains(joined, "@decorator def decorated():") {
 		t.Errorf("depth-0 output missing the merged decorator header:\n%v", lines)
 	}
-	if !strings.Contains(joined, "class Animal: … (10 more)") {
+	if !strings.Contains(joined, "class Animal: … (10 hidden outline rows)") {
 		t.Errorf("depth-0 output missing the marked class header:\n%v", lines)
 	}
 }
@@ -153,7 +153,7 @@ func TestTextFormatterDepth2(t *testing.T) {
 	if strings.Contains(lines[1], "…") {
 		t.Errorf("depth-2 line 1 = %q, want no marker (its child is shown)", lines[1])
 	}
-	if !strings.Contains(lines[2], "for y { … (1 more)") {
+	if !strings.Contains(lines[2], "for y { … (1 hidden outline row)") {
 		t.Errorf("depth-2 line 2 = %q, want the marked for header", lines[2])
 	}
 }

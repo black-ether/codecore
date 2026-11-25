@@ -38,10 +38,13 @@ import (
 // the outline formatters ignore it, so the fold output is unchanged.
 // Excluded from JSON.
 type Node struct {
-	Line     int      `json:"line"`
-	Text     string   `json:"text"`
-	Children []*Node  `json:"children,omitempty"`
-	Comments []string `json:"-"`
+	// SourceEnd is the inclusive physical end line when the extractor
+	// finds a boundary. Zero means unset, and -1 means an open block.
+	SourceEnd int      `json:"-"`
+	Line      int      `json:"line"`
+	Text      string   `json:"text"`
+	Children  []*Node  `json:"children,omitempty"`
+	Comments  []string `json:"-"`
 }
 
 // Outline is the extraction result for one file. Unbalanced is set when

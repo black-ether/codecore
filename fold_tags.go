@@ -88,6 +88,7 @@ func parseTags(lines []string) ([]*Node, bool) {
 				pendingTagClose = false
 				if pendingSelfClose && len(stack) > 0 {
 					// Rule 3: self-closing tag is a leaf, not an open container.
+					stack[len(stack)-1].node.SourceEnd = lineNum
 					stack = stack[:len(stack)-1]
 				}
 				pendingSelfClose = false
@@ -136,6 +137,7 @@ func parseTags(lines []string) ([]*Node, bool) {
 			closers := extractClosingTags(trimmed)
 			for _, tag := range closers {
 				if len(stack) > 0 && stack[len(stack)-1].name == tag {
+					stack[len(stack)-1].node.SourceEnd = lineNum
 					stack = stack[:len(stack)-1]
 				} else {
 					unbalanced = true
@@ -178,6 +180,9 @@ func parseTags(lines []string) ([]*Node, bool) {
 		unbalanced = true
 	}
 
+	for _, frame := range stack {
+		frame.node.SourceEnd = -1
+	}
 	return roots, unbalanced
 }
 

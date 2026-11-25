@@ -290,6 +290,9 @@ func run(args []string) int {
 		if opts.docPassages != nil && isMarkdownFile(f) {
 			opts.docPassages[f] = markdownPassages(src)
 		}
+		if *askFlag == "" && o.Language == "go" {
+			applyGoDeclarationRanges(o, src)
+		}
 		outlines = append(outlines, o)
 	}
 

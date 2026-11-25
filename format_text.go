@@ -9,7 +9,7 @@ import (
 // TextFormatter renders one line per node:
 //
 //	[L:4]  package sample
-//	[L:6]  import ( … (4 more)
+//	[L:6]  import ( … (4 hidden outline rows) [source L:6-11]
 //	[L:7]    "fmt"
 //
 // The [L:n] tag (1-based line number) always starts at column 0, padded
@@ -20,9 +20,9 @@ import (
 // Depth limits how many levels are shown: 0 is the top level only (the
 // big picture — every block header, nothing inside it), 1 shows one
 // level of children, and so on. A node whose children are hidden by the
-// depth limit is marked " … (N more)", where N is how many outline
-// lines hide inside it — so you can tell at a glance which blocks are
-// worth opening, without opening them.
+// depth limit reports hidden outline rows. Multiline source ranges appear
+// at the end of the heading and include the closing delimiter when known.
+// Inferred spans carry an outline label and unclosed blocks have an unknown end.
 type TextFormatter struct {
 	Depth int
 }
@@ -30,10 +30,11 @@ type TextFormatter struct {
 // textRow is one rendered line: its line tag, its depth, its text, and
 // how many outline lines hide inside it (0 when nothing is hidden).
 type textRow struct {
-	tag    string
-	depth  int
-	text   string
-	hidden int
+	tag        string
+	depth      int
+	text       string
+	hidden     int
+	rangeLabel string
 }
 
 // Format writes outlines in text form.
@@ -64,9 +65,13 @@ func (f TextFormatter) Format(w io.Writer, outlines []*Outline) error {
 		for _, r := range rows[i] {
 			marker := ""
 			if r.hidden > 0 {
-				marker = fmt.Sprintf(" … (%d more)", r.hidden)
+				unit := "rows"
+				if r.hidden == 1 {
+					unit = "row"
+				}
+				marker = fmt.Sprintf(" … (%d hidden outline %s)", r.hidden, unit)
 			}
-			fmt.Fprintf(w, "%-*s %s%s%s\n", width, r.tag, strings.Repeat("  ", r.depth), r.text, marker)
+			fmt.Fprintf(w, "%-*s %s%s%s%s\n", width, r.tag, strings.Repeat("  ", r.depth), r.text, marker, r.rangeLabel)
 		}
 	}
 	return nil
@@ -81,11 +86,22 @@ func collectRows(nodes []*Node, depth, maxDepth int) []textRow {
 		if len(n.Children) > 0 && depth >= maxDepth {
 			hidden = countDescendants(n)
 		}
+		sourceEnd, outlineEnd := outlineRange(n)
+		var label string
+		switch {
+		case sourceEnd > n.Line:
+			label = fmt.Sprintf(" [source L:%d-%d]", n.Line, sourceEnd)
+		case n.SourceEnd < 0:
+			label = fmt.Sprintf(" [source L:%d-?]", n.Line)
+		case outlineEnd > n.Line:
+			label = fmt.Sprintf(" [outline L:%d-%d]", n.Line, outlineEnd)
+		}
 		rows = append(rows, textRow{
-			tag:    fmt.Sprintf("[L:%d]", n.Line),
-			depth:  depth,
-			text:   strings.TrimSpace(n.Text),
-			hidden: hidden,
+			tag:        fmt.Sprintf("[L:%d]", n.Line),
+			depth:      depth,
+			text:       strings.TrimSpace(n.Text),
+			hidden:     hidden,
+			rangeLabel: label,
 		})
 		if len(n.Children) > 0 && depth < maxDepth {
 			rows = append(rows, collectRows(n.Children, depth+1, maxDepth)...)

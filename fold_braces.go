@@ -53,13 +53,8 @@ func parseBraces(lines []string, lang string) ([]*Node, bool) {
 			var header *Node
 			for _, ev := range events[:firstOpen] {
 				if isCloser(ev) {
-					if len(stack) > 1 && stack[len(stack)-1].opener == matchCloser(ev) {
-						if stack[len(stack)-1].node != nil {
-							header = stack[len(stack)-1].node
-						}
-						stack = stack[:len(stack)-1]
-					} else {
-						unbalanced = true
+					if owner := closeBraceFrame(&stack, ev, lineno+1, &unbalanced); owner != nil {
+						header = owner
 					}
 				}
 			}
@@ -102,19 +97,19 @@ func parseBraces(lines []string, lang string) ([]*Node, bool) {
 					stack = append(stack, braceFrame{opener: ev, kids: stack[len(stack)-1].kids})
 				}
 			} else if isCloser(ev) {
-				if len(stack) > 1 && stack[len(stack)-1].opener == matchCloser(ev) {
-					if stack[len(stack)-1].node != nil {
-						poppedHeader = stack[len(stack)-1].node
-					}
-					stack = stack[:len(stack)-1]
-				} else {
-					unbalanced = true
+				if owner := closeBraceFrame(&stack, ev, lineno+1, &unbalanced); owner != nil {
+					poppedHeader = owner
 				}
 			}
 		}
 	}
 	if len(stack) > 1 {
 		unbalanced = true
+		for _, frame := range stack[1:] {
+			if frame.node != nil {
+				frame.node.SourceEnd = -1
+			}
+		}
 	}
 	return root, unbalanced
 }
@@ -145,6 +140,20 @@ type braceFrame struct {
 	opener byte
 	node   *Node
 	kids   *[]*Node
+}
+
+func closeBraceFrame(stack *[]braceFrame, closer byte, line int, unbalanced *bool) *Node {
+	i := len(*stack) - 1
+	frame := (*stack)[i]
+	if i == 0 || frame.opener != matchCloser(closer) {
+		*unbalanced = true
+		return nil
+	}
+	*stack = (*stack)[:i]
+	if frame.node != nil {
+		frame.node.SourceEnd = line
+	}
+	return frame.node
 }
 
 func nodeOnStack(stack []braceFrame, node *Node) bool {

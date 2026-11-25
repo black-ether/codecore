@@ -16,10 +16,13 @@ type JSONFormatter struct {
 
 // jsonNode is one node in the JSON tree.
 type jsonNode struct {
-	Line     int         `json:"line"`
-	Text     string      `json:"text"`
-	HasMore  bool        `json:"hasMore,omitempty"`
-	Children []*jsonNode `json:"children,omitempty"`
+	Line           int         `json:"line"`
+	EndLine        int         `json:"endLine,omitempty"`
+	OutlineEndLine int         `json:"outlineEndLine,omitempty"`
+	HiddenRows     int         `json:"hiddenRows,omitempty"`
+	Text           string      `json:"text"`
+	HasMore        bool        `json:"hasMore,omitempty"`
+	Children       []*jsonNode `json:"children,omitempty"`
 }
 
 // jsonOutline is one file in the JSON output.
@@ -57,12 +60,14 @@ func (f JSONFormatter) Format(w io.Writer, outlines []*Outline) error {
 func convertNodes(nodes []*Node, depth, maxDepth int) []*jsonNode {
 	var out []*jsonNode
 	for _, n := range nodes {
-		jn := &jsonNode{Line: n.Line, Text: n.Text}
+		sourceEnd, outlineEnd := outlineRange(n)
+		jn := &jsonNode{Line: n.Line, EndLine: sourceEnd, OutlineEndLine: outlineEnd, Text: n.Text}
 		if len(n.Children) > 0 {
 			if depth < maxDepth {
 				jn.Children = convertNodes(n.Children, depth+1, maxDepth)
 			} else {
 				jn.HasMore = true
+				jn.HiddenRows = countDescendants(n)
 			}
 		}
 		out = append(out, jn)
