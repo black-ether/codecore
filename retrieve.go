@@ -12,16 +12,19 @@ import (
 )
 
 type retrievalResult struct {
-	Explanation *rankingExplanation `json:"explanation,omitempty"`
-	Rank        int                 `json:"rank"`
-	File        string              `json:"file"`
-	Line        int                 `json:"line"`
-	End         int                 `json:"end"`
-	Name        string              `json:"name,omitempty"`
-	Text        string              `json:"text"`
-	Score       float64             `json:"score"`
-	Parents     []string            `json:"parents,omitempty"`
-	Unit        *structuralUnit     `json:"unit,omitempty"`
+	Support        []rankingEvidence `json:"support,omitempty"`
+	matchedTerms   []int
+	importEvidence bool
+	Explanation    *rankingExplanation `json:"explanation,omitempty"`
+	Rank           int                 `json:"rank"`
+	File           string              `json:"file"`
+	Line           int                 `json:"line"`
+	End            int                 `json:"end"`
+	Name           string              `json:"name,omitempty"`
+	Text           string              `json:"text"`
+	Score          float64             `json:"score"`
+	Parents        []string            `json:"parents,omitempty"`
+	Unit           *structuralUnit     `json:"unit,omitempty"`
 }
 
 func tokenize(text string) []string {
@@ -141,22 +144,24 @@ func containsWord(text, term string) bool {
 type retrievalOptions struct {
 	splitIdentifiers bool
 	explainRanking   bool
+	rankMode         string
 	groupStructure   bool
 	docPassages      map[string]map[int]passageLine
 }
 
 type retrievalDocument struct {
-	file       string
-	node       *Node
-	length     int
-	parents    []string
-	end        int
-	name       string
-	isDef      bool
-	lowerText  string
-	wholeTerms []string
-	nameTerms  []string
-	unit       *structuralUnit
+	file           string
+	node           *Node
+	length         int
+	parents        []string
+	end            int
+	name           string
+	isDef          bool
+	lowerText      string
+	wholeTerms     []string
+	nameTerms      []string
+	importEvidence bool
+	unit           *structuralUnit
 }
 
 // definitionKeywords are the words that introduce a definition. A line
@@ -376,6 +381,15 @@ type termOccurrence struct {
 // wordOnly flag (--word) turns off prefix matching and makes the
 // substring bonus whole-word only, so "read" does not match "reader".
 func (opts retrievalOptions) allMatches(outlines []*Outline, terms []string, defOnly bool, wordOnly bool) []retrievalResult {
+	if opts.rankMode != "" {
+		terms = uniqueRankingTerms(terms)
+	}
+	var contexts map[*structuralUnit][]int
+	if opts.rankMode == "context" {
+		contexts = make(map[*structuralUnit][]int)
+	}
+	needsUnits := opts.groupStructure || opts.rankMode == "context" || opts.rankMode == "unit" || opts.rankMode == "category"
+
 	var documents []retrievalDocument
 	postings := make(map[string][]termOccurrence)
 	totalLength := 0
@@ -419,13 +433,17 @@ func (opts retrievalOptions) allMatches(outlines []*Outline, terms []string, def
 			}
 			end := endLine(node)
 			unit := enclosing
-			if opts.groupStructure {
+			if needsUnits {
 				unit = enclosingUnit(outline.Language, node, end, enclosing, parentLine)
+				if contexts != nil && unit != nil && unit != enclosing {
+					contexts[unit] = opts.contextMatches(unit, node, terms, wordOnly)
+				}
 			}
 			id := len(documents)
 			documents = append(documents, retrievalDocument{
 				file: outline.File, node: node, length: length, parents: parents, end: end,
 				name: name, nameTerms: nameTokens, isDef: isDef, lowerText: strings.ToLower(searchText), wholeTerms: wholeTerms, unit: unit,
+				importEvidence: opts.rankMode == "category" && isImportEvidence(outline.Language, node.Text, unit),
 			})
 			totalLength += length
 			frequencies := make(map[string]int)
@@ -468,6 +486,10 @@ func (opts retrievalOptions) allMatches(outlines []*Outline, terms []string, def
 	n := float64(len(documents))
 	avgdl := float64(totalLength) / n
 	scores := make([]float64, len(documents))
+	var evidence [][]int
+	if opts.rankMode != "" {
+		evidence = make([][]int, len(documents))
+	}
 	var trace []rankingExplanation
 	if opts.explainRanking {
 		trace = make([]rankingExplanation, len(documents))
@@ -476,7 +498,7 @@ func (opts retrievalOptions) allMatches(outlines []*Outline, terms []string, def
 	// A query term matches the exact term and, when it is at least 3
 	// letters, any longer term it prefixes, so "auth" finds
 	// "authenticate" — unless --word is on.
-	for _, term := range terms {
+	for termIndex, term := range terms {
 		matched := prefixMatches(postings, term, wordOnly)
 		df := float64(len(matched))
 		if df > 0 {
@@ -485,6 +507,9 @@ func (opts retrievalOptions) allMatches(outlines []*Outline, terms []string, def
 				dl := float64(documents[doc].length)
 				contribution := idf * (tf * (k1 + 1)) / (tf + k1*(1-b+b*dl/avgdl))
 				scores[doc] += contribution
+				if evidence != nil {
+					evidence[doc] = append(evidence[doc], termIndex)
+				}
 				if trace != nil {
 					trace[doc].Terms = append(trace[doc].Terms, rankingTerm{Term: term, TF: int(tf), DF: int(df), IDF: idf, BM25: contribution})
 				}
@@ -500,6 +525,11 @@ func (opts retrievalOptions) allMatches(outlines []*Outline, terms []string, def
 			if (opts.splitIdentifiers && slices.Contains(doc.wholeTerms, term)) ||
 				(!opts.splitIdentifiers && containsWord(doc.lowerText, term)) {
 				scores[i] += substringBonus
+				if evidence != nil {
+					if _, ok := matched[i]; !ok {
+						evidence[i] = append(evidence[i], termIndex)
+					}
+				}
 				if trace != nil {
 					if _, ok := matched[i]; ok {
 						trace[i].Terms[len(trace[i].Terms)-1].Bonus = substringBonus
@@ -529,12 +559,24 @@ func (opts retrievalOptions) allMatches(outlines []*Outline, terms []string, def
 				explanation.Covered = len(distinct)
 			}
 			results = append(results, retrievalResult{
-				Explanation: explanation,
-				File:        doc.file, Line: doc.node.Line, End: doc.end, Name: doc.name, Text: doc.node.Text,
+				Explanation: explanation, importEvidence: doc.importEvidence,
+				File: doc.file, Line: doc.node.Line, End: doc.end, Name: doc.name, Text: doc.node.Text,
 				Score: scores[i], Parents: doc.parents, Unit: doc.unit,
 			})
+			if evidence != nil {
+				results[len(results)-1].matchedTerms = evidence[i]
+			}
 		}
 	}
+	sortRetrievalResults(results)
+	if opts.rankMode != "" {
+		results = opts.applyRankingExperiment(results, terms, contexts)
+		sortRetrievalResults(results)
+	}
+	return results
+}
+
+func sortRetrievalResults(results []retrievalResult) {
 	sort.SliceStable(results, func(i, j int) bool {
 		a, b := results[i], results[j]
 		if a.Score != b.Score {
@@ -545,7 +587,6 @@ func (opts retrievalOptions) allMatches(outlines []*Outline, terms []string, def
 		}
 		return a.Line < b.Line
 	})
-	return results
 }
 
 // retrieve returns the top-ranked matches for a query: allMatches,
@@ -685,6 +726,11 @@ func formatResults(w io.Writer, format, query string, results []retrievalResult)
 			if _, err := fmt.Fprintf(w, "  %d. %s [L:%d-%d] %s %s\n     match L:%d %s (score %.2f)\n",
 				result.Rank, result.File, unit.Start, unit.End, unit.Kind, unit.Name, result.Line, result.Text, result.Score); err != nil {
 				return err
+			}
+			for _, support := range result.Support {
+				if _, err := fmt.Fprintf(w, "     support L:%d %s (%s)\n", support.Line, support.Text, strings.Join(support.Terms, ", ")); err != nil {
+					return err
+				}
 			}
 			continue
 		}
