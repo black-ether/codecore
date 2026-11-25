@@ -83,13 +83,13 @@ func TestFoldTextAsk(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	got := retrieve([]*Outline{outline}, tokenize("database"), 5, false, false, false)
+	got := (retrievalOptions{}).retrieve([]*Outline{outline}, tokenize("database"), 5, false, false, false)
 	if len(got) != 1 || got[0].Text != "## Database" {
 		t.Fatalf("database query = %+v, want the Database heading", got)
 	}
 	// The "host = ..." line is an assignment, so it carries a name
 	// ("host") and ranks first for its own term.
-	got = retrieve([]*Outline{outline}, tokenize("host"), 5, false, false, false)
+	got = (retrievalOptions{}).retrieve([]*Outline{outline}, tokenize("host"), 5, false, false, false)
 	if len(got) != 1 || got[0].Text != "host = db.example.com" {
 		t.Fatalf("host query = %+v, want the host line", got)
 	}

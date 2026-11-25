@@ -146,7 +146,7 @@ func Other() {}
 `
 	o := mustExtractSource(t, "test.go", src)
 	attachComments(o, []byte(src))
-	got := retrieve([]*Outline{o}, tokenize("configuration"), 5, false, false, false)
+	got := (retrievalOptions{}).retrieve([]*Outline{o}, tokenize("configuration"), 5, false, false, false)
 	if len(got) != 1 {
 		t.Fatalf("got %+v, want 1 result", got)
 	}
@@ -233,7 +233,7 @@ def other():
     pass
 `
 	o := mustExtractSource(t, "test.py", src)
-	got := retrieve([]*Outline{o}, tokenize("stable"), 5, false, false, false)
+	got := (retrievalOptions{}).retrieve([]*Outline{o}, tokenize("stable"), 5, false, false, false)
 	if len(got) != 1 {
 		t.Fatalf("got %+v, want 1 result", got)
 	}

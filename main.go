@@ -29,6 +29,7 @@ Flags:
   --pattern "pat"      find all structural token-pattern matches
   --top N              maximum results for --ask (default 5)
   --def-only           with --ask, return definitions only
+  --split-identifiers  with --ask, index compound identifier parts
   --per-file           with --ask, return the best match per file only
   --word               with --ask, match whole words only (no prefix
                        matching, so "read" does not match "reader")
@@ -101,6 +102,7 @@ func run(args []string) int {
 	topFlag := fs.Int("top", 5, "maximum results for --ask")
 	defOnlyFlag := fs.Bool("def-only", false, "only definitions for --ask")
 	perFileFlag := fs.Bool("per-file", false, "best match per file for --ask")
+	splitIdentifiersFlag := fs.Bool("split-identifiers", false, "index compound identifier parts for --ask")
 	wordFlag := fs.Bool("word", false, "whole-word only for --ask (no prefix matching)")
 	noTestsFlag := fs.Bool("no-tests", false, "exclude test files")
 	filenameOnlyFlag := fs.Bool("filename-only", false, "with --ask, print only matching file names")
@@ -141,13 +143,18 @@ func run(args []string) int {
 			return 2
 		}
 	}
+	opts := retrievalOptions{splitIdentifiers: *splitIdentifiersFlag}
 	var terms []string
 	if *askFlag != "" {
 		if *topFlag < 1 {
 			fmt.Fprintln(os.Stderr, "codecore: --top must be 1 or more")
 			return 2
 		}
-		terms = filterQueryTerms(tokenize(*askFlag))
+		terms = tokenize(*askFlag)
+		if opts.splitIdentifiers {
+			terms = wholeIdentifierTerms(*askFlag)
+		}
+		terms = filterQueryTerms(terms)
 		if len(terms) == 0 {
 			fmt.Fprintln(os.Stderr, "codecore: --ask query must contain a searchable term")
 			return 2
@@ -156,6 +163,10 @@ func run(args []string) int {
 	if len(paths) == 0 {
 		fmt.Print(helpText())
 		return 0
+	}
+	if opts.splitIdentifiers && *askFlag == "" {
+		fmt.Fprintln(os.Stderr, "codecore: --split-identifiers needs --ask")
+		return 2
 	}
 	if *wordFlag && *askFlag == "" {
 		fmt.Fprintln(os.Stderr, "codecore: --word needs --ask")
@@ -246,12 +257,12 @@ func run(args []string) int {
 
 	if *askFlag != "" {
 		if *countFlag {
-			err = formatCounts(os.Stdout, *formatFlag, *askFlag, countMatches(outlines, terms, *defOnlyFlag, *wordFlag))
+			err = formatCounts(os.Stdout, *formatFlag, *askFlag, opts.countMatches(outlines, terms, *defOnlyFlag, *wordFlag))
 		} else if *filenameOnlyFlag {
-			results := retrieve(outlines, terms, *topFlag, *defOnlyFlag, *perFileFlag, *wordFlag)
+			results := opts.retrieve(outlines, terms, *topFlag, *defOnlyFlag, *perFileFlag, *wordFlag)
 			err = formatFileNames(os.Stdout, *formatFlag, *askFlag, results)
 		} else {
-			results := retrieve(outlines, terms, *topFlag, *defOnlyFlag, *perFileFlag, *wordFlag)
+			results := opts.retrieve(outlines, terms, *topFlag, *defOnlyFlag, *perFileFlag, *wordFlag)
 			err = formatResults(os.Stdout, *formatFlag, *askFlag, results)
 		}
 	} else {

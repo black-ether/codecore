@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"math"
+	"slices"
 	"sort"
 	"strings"
 	"unicode"
@@ -135,15 +136,20 @@ func containsWord(text, term string) bool {
 	return false
 }
 
+type retrievalOptions struct {
+	splitIdentifiers bool
+}
+
 type retrievalDocument struct {
-	file      string
-	node      *Node
-	length    int
-	parents   []string
-	end       int
-	name      string
-	isDef     bool
-	lowerText string
+	file       string
+	node       *Node
+	length     int
+	parents    []string
+	end        int
+	name       string
+	isDef      bool
+	lowerText  string
+	wholeTerms []string
 }
 
 // definitionKeywords are the words that introduce a definition. A line
@@ -362,7 +368,7 @@ type termOccurrence struct {
 // retrieve() does that, and countMatches() aggregates it. The
 // wordOnly flag (--word) turns off prefix matching and makes the
 // substring bonus whole-word only, so "read" does not match "reader".
-func allMatches(outlines []*Outline, terms []string, defOnly bool, wordOnly bool) []retrievalResult {
+func (opts retrievalOptions) allMatches(outlines []*Outline, terms []string, defOnly bool, wordOnly bool) []retrievalResult {
 	var documents []retrievalDocument
 	postings := make(map[string][]termOccurrence)
 	totalLength := 0
@@ -380,7 +386,12 @@ func allMatches(outlines []*Outline, terms []string, defOnly bool, wordOnly bool
 			if len(node.Comments) > 0 {
 				searchText += " " + strings.Join(node.Comments, " ")
 			}
-			tokens := tokenize(searchText)
+			var tokens, wholeTerms []string
+			if opts.splitIdentifiers {
+				tokens, wholeTerms = identifierTerms(searchText)
+			} else {
+				tokens = tokenize(searchText)
+			}
 			name, isDef := extractName(node.Text)
 			// Only a definition's name is boosted, so a definition
 			// ranks above a mere use of the same name. The boost
@@ -389,11 +400,18 @@ func allMatches(outlines []*Outline, terms []string, defOnly bool, wordOnly bool
 			// for the boost itself.
 			nameTokens := []string{}
 			if isDef {
-				nameTokens = tokenize(name)
+				if opts.splitIdentifiers {
+					nameTokens = wholeIdentifierTerms(name)
+				} else {
+					nameTokens = tokenize(name)
+				}
 			}
 			length := len(tokens)
+			if opts.splitIdentifiers {
+				length = len(wholeTerms)
+			}
 			id := len(documents)
-			documents = append(documents, retrievalDocument{file, node, length, parents, endLine(node), name, isDef, strings.ToLower(searchText)})
+			documents = append(documents, retrievalDocument{file, node, length, parents, endLine(node), name, isDef, strings.ToLower(searchText), wholeTerms})
 			totalLength += length
 			frequencies := make(map[string]int)
 			for _, token := range tokens {
@@ -456,7 +474,8 @@ func allMatches(outlines []*Outline, terms []string, defOnly bool, wordOnly bool
 			if len(term) < 3 {
 				continue
 			}
-			if containsWord(doc.lowerText, term) {
+			if (opts.splitIdentifiers && slices.Contains(doc.wholeTerms, term)) ||
+				(!opts.splitIdentifiers && containsWord(doc.lowerText, term)) {
 				scores[i] += substringBonus
 			}
 		}
@@ -488,8 +507,8 @@ func allMatches(outlines []*Outline, terms []string, defOnly bool, wordOnly bool
 // retrieve returns the top-ranked matches for a query: allMatches,
 // then the --per-file dedup (best result per file only), then the
 // --top cut, then ranks.
-func retrieve(outlines []*Outline, terms []string, top int, defOnly bool, perFile bool, wordOnly bool) []retrievalResult {
-	results := allMatches(outlines, terms, defOnly, wordOnly)
+func (opts retrievalOptions) retrieve(outlines []*Outline, terms []string, top int, defOnly bool, perFile bool, wordOnly bool) []retrievalResult {
+	results := opts.allMatches(outlines, terms, defOnly, wordOnly)
 	// Per-file mode keeps only the best result from each file, so one
 	// file cannot fill the whole top-N list and push other files out
 	// (in a repo-wide search the Go file took 4 of the top 10 slots,
@@ -526,9 +545,9 @@ type fileCount struct {
 // the query (score > 0), before any --top cut. A file with many
 // matches shows its full count, not just the ones that made the top
 // N. Sorted by count desc, then file.
-func countMatches(outlines []*Outline, terms []string, defOnly bool, wordOnly bool) []fileCount {
+func (opts retrievalOptions) countMatches(outlines []*Outline, terms []string, defOnly bool, wordOnly bool) []fileCount {
 	counts := make(map[string]int)
-	for _, r := range allMatches(outlines, terms, defOnly, wordOnly) {
+	for _, r := range opts.allMatches(outlines, terms, defOnly, wordOnly) {
 		counts[r.File]++
 	}
 	result := make([]fileCount, 0, len(counts))
