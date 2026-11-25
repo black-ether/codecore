@@ -198,7 +198,8 @@ type braceState struct {
 	// One entry per nested JS/TS template. Zero is template text.
 	// A positive depth counts braces inside the current interpolation,
 	// including its outer ${...} braces.
-	templates []int
+	templates    []int
+	slashContext jsSlashContext
 }
 
 // scanBraces scans one line for brackets outside strings and comments.
@@ -255,9 +256,11 @@ func scanBraces(line, lang string, st *braceState) ([]braceEvent, bool) {
 			case c == '`':
 				st.templates = st.templates[:template]
 				events = append(events, templateClose)
+				st.slashContext.next = jsAfterOperand
 				i++
 			case c == '$' && i+1 < n && line[i+1] == '{':
 				st.templates[template] = 1
+				st.slashContext.next = jsExpectOperand
 				i += 2
 			default:
 				i++
@@ -305,6 +308,9 @@ func scanBraces(line, lang string, st *braceState) ([]braceEvent, bool) {
 			if i < n {
 				i++
 			}
+			if javascript {
+				st.slashContext.next = jsAfterOperand
+			}
 			codeChars = append(codeChars, 'x') // the string is a code token
 			continue
 		}
@@ -327,6 +333,9 @@ func scanBraces(line, lang string, st *braceState) ([]braceEvent, bool) {
 					i++
 				}
 			}
+			if javascript {
+				st.slashContext.next = jsAfterOperand
+			}
 			codeChars = append(codeChars, 'x') // the rune/literal is a code token
 			continue
 		}
@@ -343,6 +352,14 @@ func scanBraces(line, lang string, st *braceState) ([]braceEvent, bool) {
 			i++
 			continue
 		}
+		if javascript && c == '/' && st.slashContext.next == jsExpectOperand {
+			if end := jsRegexEnd(line, i); end > i {
+				st.slashContext.next = jsAfterOperand
+				codeChars = append(codeChars, 'x')
+				i = end
+				continue
+			}
+		}
 		// Interpolation delimiters belong to the template lexer. Emit
 		// braces within the expression to the folder as ordinary code.
 		if template >= 0 {
@@ -357,13 +374,17 @@ func scanBraces(line, lang string, st *braceState) ([]braceEvent, bool) {
 				}
 			}
 		}
+		next := i + 1
+		if javascript {
+			next = st.slashContext.consume(line, i)
+		}
 		switch c {
 		case '(', ')', '[', ']', '{', '}':
 			events = append(events, braceEvent(c))
 		default:
-			codeChars = append(codeChars, c)
+			codeChars = append(codeChars, line[i:next]...)
 		}
-		i++
+		i = next
 	}
 	return events, hasCode(codeChars)
 }

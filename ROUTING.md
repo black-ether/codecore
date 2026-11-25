@@ -24,6 +24,17 @@ now apply to every brace language except PowerShell (which uses
 because the tests ran with `--lang go`, which had those rules, and
 the routing table registers each language under its own name.
 
+JavaScript and TypeScript regex literals use the preceding token to
+distinguish a pattern from division. The scanner recognizes expression
+starts after assignments, operators, `return`, control conditions and
+template interpolation openers. A closing brace defaults to an operand end
+because it can close an object literal. A regex statement directly after a
+block and some automatic semicolon-insertion boundaries are ambiguous.
+Contextual keywords such as `await` and `yield` can also be identifiers,
+and the lexer treats `of` as an identifier. TypeScript postfix non-null
+assertions, generic closers and JSX tags can require more syntactic context
+than the lexer tracks.
+
 ### Indent parser (structure is in the indentation)
 
 Python, Ruby, Perl, Lua, R, Julia, Objective-C, Bash, SQL, MATLAB,
