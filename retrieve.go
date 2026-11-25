@@ -12,14 +12,15 @@ import (
 )
 
 type retrievalResult struct {
-	Rank    int      `json:"rank"`
-	File    string   `json:"file"`
-	Line    int      `json:"line"`
-	End     int      `json:"end"`
-	Name    string   `json:"name,omitempty"`
-	Text    string   `json:"text"`
-	Score   float64  `json:"score"`
-	Parents []string `json:"parents,omitempty"`
+	Rank    int             `json:"rank"`
+	File    string          `json:"file"`
+	Line    int             `json:"line"`
+	End     int             `json:"end"`
+	Name    string          `json:"name,omitempty"`
+	Text    string          `json:"text"`
+	Score   float64         `json:"score"`
+	Parents []string        `json:"parents,omitempty"`
+	Unit    *structuralUnit `json:"unit,omitempty"`
 }
 
 func tokenize(text string) []string {
@@ -138,6 +139,7 @@ func containsWord(text, term string) bool {
 
 type retrievalOptions struct {
 	splitIdentifiers bool
+	groupStructure   bool
 }
 
 type retrievalDocument struct {
@@ -150,6 +152,7 @@ type retrievalDocument struct {
 	isDef      bool
 	lowerText  string
 	wholeTerms []string
+	unit       *structuralUnit
 }
 
 // definitionKeywords are the words that introduce a definition. A line
@@ -372,8 +375,8 @@ func (opts retrievalOptions) allMatches(outlines []*Outline, terms []string, def
 	var documents []retrievalDocument
 	postings := make(map[string][]termOccurrence)
 	totalLength := 0
-	var walk func(string, []*Node, []string)
-	walk = func(file string, nodes []*Node, parents []string) {
+	var walk func(*Outline, []*Node, []string, *structuralUnit, int)
+	walk = func(outline *Outline, nodes []*Node, parents []string, enclosing *structuralUnit, parentLine int) {
 		for _, node := range nodes {
 			// The searchable text is the node's line plus the
 			// comments attached to it, so a word that only appears
@@ -410,8 +413,16 @@ func (opts retrievalOptions) allMatches(outlines []*Outline, terms []string, def
 			if opts.splitIdentifiers {
 				length = len(wholeTerms)
 			}
+			end := endLine(node)
+			unit := enclosing
+			if opts.groupStructure {
+				unit = enclosingUnit(outline.Language, node, end, enclosing, parentLine)
+			}
 			id := len(documents)
-			documents = append(documents, retrievalDocument{file, node, length, parents, endLine(node), name, isDef, strings.ToLower(searchText), wholeTerms})
+			documents = append(documents, retrievalDocument{
+				file: outline.File, node: node, length: length, parents: parents, end: end,
+				name: name, isDef: isDef, lowerText: strings.ToLower(searchText), wholeTerms: wholeTerms, unit: unit,
+			})
 			totalLength += length
 			frequencies := make(map[string]int)
 			for _, token := range tokens {
@@ -425,12 +436,12 @@ func (opts retrievalOptions) allMatches(outlines []*Outline, terms []string, def
 			}
 			if len(node.Children) > 0 {
 				// Give each branch its own path so siblings cannot overwrite it.
-				walk(file, node.Children, append(parents[:len(parents):len(parents)], strings.TrimSpace(node.Text)))
+				walk(outline, node.Children, append(parents[:len(parents):len(parents)], strings.TrimSpace(node.Text)), unit, node.Line)
 			}
 		}
 	}
 	for _, outline := range outlines {
-		walk(outline.File, outline.Nodes, nil)
+		walk(outline, outline.Nodes, nil, nil, 0)
 	}
 
 	results := make([]retrievalResult, 0)
@@ -487,7 +498,7 @@ func (opts retrievalOptions) allMatches(outlines []*Outline, terms []string, def
 			}
 			results = append(results, retrievalResult{
 				File: doc.file, Line: doc.node.Line, End: doc.end, Name: doc.name, Text: doc.node.Text,
-				Score: scores[i], Parents: doc.parents,
+				Score: scores[i], Parents: doc.parents, Unit: doc.unit,
 			})
 		}
 	}
@@ -509,6 +520,9 @@ func (opts retrievalOptions) allMatches(outlines []*Outline, terms []string, def
 // --top cut, then ranks.
 func (opts retrievalOptions) retrieve(outlines []*Outline, terms []string, top int, defOnly bool, perFile bool, wordOnly bool) []retrievalResult {
 	results := opts.allMatches(outlines, terms, defOnly, wordOnly)
+	if opts.groupStructure {
+		results = groupStructuralMatches(results)
+	}
 	// Per-file mode keeps only the best result from each file, so one
 	// file cannot fill the whole top-N list and push other files out
 	// (in a repo-wide search the Go file took 4 of the top 10 slots,
@@ -631,6 +645,13 @@ func formatResults(w io.Writer, format, query string, results []retrievalResult)
 		return err
 	}
 	for _, result := range results {
+		if unit := result.Unit; unit != nil {
+			if _, err := fmt.Fprintf(w, "  %d. %s [L:%d-%d] %s %s\n     match L:%d %s (score %.2f)\n",
+				result.Rank, result.File, unit.Start, unit.End, unit.Kind, unit.Name, result.Line, result.Text, result.Score); err != nil {
+				return err
+			}
+			continue
+		}
 		context := ""
 		if len(result.Parents) > 0 {
 			context = " · in " + strings.Join(result.Parents, " > ")

@@ -33,6 +33,7 @@ Flags:
   --per-file           with --ask, return the best match per file only
   --word               with --ask, match whole words only (no prefix
                        matching, so "read" does not match "reader")
+  --group-structure   with --ask, return the best match per structural unit
   --categories LIST   with --ask, include production,docs,tests,fixtures,generated
   --no-tests           exclude test files (test_*.py, *_test.go,
                        *.spec.js, tests/ directories, and so on)
@@ -105,6 +106,7 @@ func run(args []string) int {
 	perFileFlag := fs.Bool("per-file", false, "best match per file for --ask")
 	splitIdentifiersFlag := fs.Bool("split-identifiers", false, "index compound identifier parts for --ask")
 	wordFlag := fs.Bool("word", false, "whole-word only for --ask (no prefix matching)")
+	groupStructureFlag := fs.Bool("group-structure", false, "group matches by enclosing structural unit for --ask")
 	categoriesFlag := fs.String("categories", "", "comma-separated source categories for --ask")
 	noTestsFlag := fs.Bool("no-tests", false, "exclude test files")
 	filenameOnlyFlag := fs.Bool("filename-only", false, "with --ask, print only matching file names")
@@ -160,7 +162,11 @@ func run(args []string) int {
 			return 2
 		}
 	}
-	opts := retrievalOptions{splitIdentifiers: *splitIdentifiersFlag}
+	opts := retrievalOptions{splitIdentifiers: *splitIdentifiersFlag, groupStructure: *groupStructureFlag}
+	if opts.groupStructure && (*askFlag == "" || *countFlag) {
+		fmt.Fprintln(os.Stderr, "codecore: --group-structure needs --ask and cannot be used with --count")
+		return 2
+	}
 	var terms []string
 	if *askFlag != "" {
 		if *topFlag < 1 {
