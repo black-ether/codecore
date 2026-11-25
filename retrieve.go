@@ -420,7 +420,7 @@ func (opts retrievalOptions) allMatches(outlines []*Outline, terms []string, def
 			end := endLine(node)
 			unit := enclosing
 			if opts.groupStructure {
-				unit = enclosingUnit(outline.Language, node, end, enclosing, parentLine)
+				unit = enclosingUnit(outline.Language, node, enclosing, parentLine)
 			}
 			id := len(documents)
 			documents = append(documents, retrievalDocument{
@@ -682,8 +682,9 @@ func formatResults(w io.Writer, format, query string, results []retrievalResult)
 	}
 	for _, result := range results {
 		if unit := result.Unit; unit != nil {
-			if _, err := fmt.Fprintf(w, "  %d. %s [L:%d-%d] %s %s\n     match L:%d %s (score %.2f)\n",
-				result.Rank, result.File, unit.Start, unit.End, unit.Kind, unit.Name, result.Line, result.Text, result.Score); err != nil {
+			if _, err := fmt.Fprintf(w, "  %d. %s %s %s %s\n     match L:%d %s (score %.2f)\n",
+				result.Rank, result.File, sourceRangeLabel(unit.Start, unit.End, unit.OutlineEnd, unit.SourceEndUnknown),
+				unit.Kind, unit.Name, result.Line, result.Text, result.Score); err != nil {
 				return err
 			}
 			continue

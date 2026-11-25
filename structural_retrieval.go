@@ -6,10 +6,12 @@ import (
 )
 
 type structuralUnit struct {
-	Kind  string `json:"kind"`
-	Name  string `json:"name"`
-	Start int    `json:"start"`
-	End   int    `json:"end"`
+	Kind             string `json:"kind"`
+	Name             string `json:"name"`
+	Start            int    `json:"start"`
+	End              int    `json:"end,omitempty"`
+	OutlineEnd       int    `json:"outlineEnd,omitempty"`
+	SourceEndUnknown bool   `json:"sourceEndUnknown,omitempty"`
 }
 
 const unitIdentifier = `[\p{L}_$][\p{L}\p{N}_$]*`
@@ -27,7 +29,7 @@ var (
 	jsMethod = regexp.MustCompile(`^(?:(?:public|protected|private|static|async|get|set|override)\s+)*([#]?` + unitIdentifier + `)\s*(?:<[^>]*>)?\s*\(`)
 )
 
-func enclosingUnit(language string, node *Node, end int, parent *structuralUnit, parentLine int) *structuralUnit {
+func enclosingUnit(language string, node *Node, parent *structuralUnit, parentLine int) *structuralUnit {
 	text := strings.TrimSpace(node.Text)
 	var kind, name string
 	switch language {
@@ -64,7 +66,11 @@ func enclosingUnit(language string, node *Node, end int, parent *structuralUnit,
 	if name == "" {
 		return parent
 	}
-	return &structuralUnit{Kind: kind, Name: name, Start: node.Line, End: end}
+	sourceEnd, outlineEnd := outlineRange(node)
+	return &structuralUnit{
+		Kind: kind, Name: name, Start: node.Line, End: sourceEnd, OutlineEnd: outlineEnd,
+		SourceEndUnknown: node.SourceEnd < 0 || (sourceEnd == 0 && outlineEnd == 0),
+	}
 }
 
 // Matches arrive in rank order. Keeping the best line leaves the group's

@@ -1,13 +1,14 @@
 package main
 
 import (
+	"fmt"
 	"go/parser"
 	gotoken "go/token"
 )
 
 // Go signatures can end with a return type on a different line from the
 // declaration. Use Go's parser to recover the physical declaration range
-// while leaving the outline tree and ranked retrieval spans alone.
+// without changing outline ancestry or matching spans.
 func applyGoDeclarationRanges(outline *Outline, src []byte) {
 	positions := gotoken.NewFileSet()
 	file, err := parser.ParseFile(positions, outline.File, src, parser.SkipObjectResolution)
@@ -37,4 +38,15 @@ func outlineRange(n *Node) (sourceEnd, outlineEnd int) {
 		return 0, endLine(n)
 	}
 	return 0, 0
+}
+
+func sourceRangeLabel(start, sourceEnd, outlineEnd int, unknown bool) string {
+	switch {
+	case sourceEnd > 0:
+		return fmt.Sprintf("[source L:%d-%d]", start, sourceEnd)
+	case unknown:
+		return fmt.Sprintf("[source L:%d-?]", start)
+	default:
+		return fmt.Sprintf("[outline L:%d-%d]", start, outlineEnd)
+	}
 }

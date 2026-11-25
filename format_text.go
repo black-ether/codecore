@@ -88,13 +88,8 @@ func collectRows(nodes []*Node, depth, maxDepth int) []textRow {
 		}
 		sourceEnd, outlineEnd := outlineRange(n)
 		var label string
-		switch {
-		case sourceEnd > n.Line:
-			label = fmt.Sprintf(" [source L:%d-%d]", n.Line, sourceEnd)
-		case n.SourceEnd < 0:
-			label = fmt.Sprintf(" [source L:%d-?]", n.Line)
-		case outlineEnd > n.Line:
-			label = fmt.Sprintf(" [outline L:%d-%d]", n.Line, outlineEnd)
+		if sourceEnd > n.Line || outlineEnd > n.Line || n.SourceEnd < 0 {
+			label = " " + sourceRangeLabel(n.Line, sourceEnd, outlineEnd, n.SourceEnd < 0)
 		}
 		rows = append(rows, textRow{
 			tag:        fmt.Sprintf("[L:%d]", n.Line),

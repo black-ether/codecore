@@ -296,7 +296,7 @@ func run(args []string) int {
 		if opts.docPassages != nil && isMarkdownFile(f) {
 			opts.docPassages[f] = markdownPassages(src)
 		}
-		if *askFlag == "" && o.Language == "go" {
+		if o.Language == "go" && (*askFlag == "" || opts.groupStructure) {
 			applyGoDeclarationRanges(o, src)
 		}
 		outlines = append(outlines, o)

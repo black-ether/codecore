@@ -101,6 +101,16 @@ Use `--explain-ranking` with `--ask --format json` to inspect document
 length, distinct query-term coverage, and each term’s BM25 and
 whole-word contributions.
 
+Use `--group-structure` with `--ask` to show the highest-ranked matching
+line per recognized structural unit. In JSON, `unit.start` and
+`unit.end` are inclusive source lines, including the closing delimiter
+when the source end is known. `unit.outlineEnd` marks the last retained
+row if a source boundary is unavailable. `unit.sourceEndUnknown`
+marks an unclosed unit or one with no known span. Text distinguishes these as
+`[source L:start-end]`, `[outline L:start-end]`, and
+`[source L:start-?]`. The result’s own `line` and `end` still describe
+the representative match and its outline span.
+
 ```sh
 go run . --ask "sort" --top 3 testdb/go
 ```
