@@ -1,0 +1,82 @@
+{
+  "anchors": {
+    "signal-register": [
+      [
+        "signals.go",
+        18,
+        18
+      ]
+    ],
+    "signal-force": [
+      [
+        "signals.go",
+        24,
+        26
+      ]
+    ],
+    "output-buffer": [
+      [
+        "internal/output/prefixed.go",
+        56,
+        73
+      ]
+    ],
+    "output-prefix": [
+      [
+        "internal/output/prefixed.go",
+        104,
+        110
+      ]
+    ]
+  },
+  "queries": {
+    "HN1": {
+      "kind": "natural",
+      "query": "How does Task respond when interrupted repeatedly?",
+      "anchors": [
+        "signal-register",
+        "signal-force"
+      ]
+    },
+    "HN2": {
+      "kind": "natural",
+      "query": "How are partial output lines buffered before adding a prefix?",
+      "anchors": [
+        "output-buffer",
+        "output-prefix"
+      ]
+    },
+    "HS1": {
+      "kind": "informed",
+      "query": "intercept interrupt signal force shutdown after third notification",
+      "anchors": [
+        "signal-register",
+        "signal-force"
+      ]
+    },
+    "HS2": {
+      "kind": "informed",
+      "query": "prefix writer buffer incomplete lines and flush on close",
+      "anchors": [
+        "output-buffer",
+        "output-prefix"
+      ]
+    },
+    "HD1": {
+      "kind": "exact-identifier",
+      "query": "signal.Notify syscall.SIGHUP",
+      "anchors": [
+        "signal-register",
+        "signal-force"
+      ]
+    },
+    "HD2": {
+      "kind": "exact-identifier",
+      "query": "writeOutputLines ReadString WriteString",
+      "anchors": [
+        "output-buffer",
+        "output-prefix"
+      ]
+    }
+  }
+}

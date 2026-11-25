@@ -1,0 +1,137 @@
+{
+  "corpus": "checkouts/task-full-canonical",
+  "corpus_commit": "b5aef1c287a9be8038347a17646bdf4bc7185bce",
+  "verified_tracked_blobs": 982,
+  "samples": 5,
+  "order_seed": 7301,
+  "binaries": [
+    {
+      "name": "codecore-26b8bde.exe",
+      "sha256": "2581653966ac017d4f4ad1008902247c456f220178022ad045fc80f62c355178",
+      "go_version": [
+        "\tpath\tcodecore",
+        "\tmod\tcodecore\tv0.0.0-20261124055052-26b8bdecaba0\t",
+        "\tbuild\t-buildmode=exe",
+        "\tbuild\t-compiler=gc",
+        "\tbuild\t-trimpath=true",
+        "\tbuild\tCGO_ENABLED=0",
+        "\tbuild\tGOARCH=amd64",
+        "\tbuild\tGOOS=windows",
+        "\tbuild\tGOAMD64=v1",
+        "\tbuild\tvcs=git",
+        "\tbuild\tvcs.revision=26b8bdecaba0531c5b84746761bab214bb457a64",
+        "\tbuild\tvcs.time=2026-11-24T05:50:52Z",
+        "\tbuild\tvcs.modified=false"
+      ]
+    },
+    {
+      "name": "codecore-stage1-identifiers.exe",
+      "sha256": "d284376b9fdfc3f6709c95d4a364507e60b2e30b7edbfc79d07698e4de2ba31d",
+      "go_version": [
+        "\tpath\tcodecore",
+        "\tmod\tcodecore\tv0.0.0-20261125100355-b3a4a6b3e60c\t",
+        "\tbuild\t-buildmode=exe",
+        "\tbuild\t-compiler=gc",
+        "\tbuild\tCGO_ENABLED=1",
+        "\tbuild\tCGO_CFLAGS=",
+        "\tbuild\tCGO_CPPFLAGS=",
+        "\tbuild\tCGO_CXXFLAGS=",
+        "\tbuild\tCGO_LDFLAGS=",
+        "\tbuild\tGOARCH=amd64",
+        "\tbuild\tGOOS=windows",
+        "\tbuild\tGOAMD64=v1",
+        "\tbuild\tvcs=git",
+        "\tbuild\tvcs.revision=b3a4a6b3e60cb0f6fac44e17dce501cedfdad30f",
+        "\tbuild\tvcs.time=2026-11-25T10:03:55Z",
+        "\tbuild\tvcs.modified=false"
+      ]
+    },
+    {
+      "name": "codecore-stage2-categories.exe",
+      "sha256": "80c12d81eda99a0901f725beb46d9fab23a56aa602b54372efab9122900c4bb0",
+      "go_version": [
+        "\tpath\tcodecore",
+        "\tmod\tcodecore\tv0.0.0-20261125100623-fe18d0b01d1f\t",
+        "\tbuild\t-buildmode=exe",
+        "\tbuild\t-compiler=gc",
+        "\tbuild\tCGO_ENABLED=1",
+        "\tbuild\tCGO_CFLAGS=",
+        "\tbuild\tCGO_CPPFLAGS=",
+        "\tbuild\tCGO_CXXFLAGS=",
+        "\tbuild\tCGO_LDFLAGS=",
+        "\tbuild\tGOARCH=amd64",
+        "\tbuild\tGOOS=windows",
+        "\tbuild\tGOAMD64=v1",
+        "\tbuild\tvcs=git",
+        "\tbuild\tvcs.revision=fe18d0b01d1fb09fceca878927efc78486f90200",
+        "\tbuild\tvcs.time=2026-11-25T10:06:23Z",
+        "\tbuild\tvcs.modified=false"
+      ]
+    },
+    {
+      "name": "codecore-stage3-structure.exe",
+      "sha256": "61fcff2933ce8aa4153619beffc9c6ef51e1525df0661dcb24de8ffa8e27e56a",
+      "go_version": [
+        "\tpath\tcodecore",
+        "\tmod\tcodecore\tv0.0.0-20261125101432-db0ed04c39ab\t",
+        "\tbuild\t-buildmode=exe",
+        "\tbuild\t-compiler=gc",
+        "\tbuild\tCGO_ENABLED=1",
+        "\tbuild\tCGO_CFLAGS=",
+        "\tbuild\tCGO_CPPFLAGS=",
+        "\tbuild\tCGO_CXXFLAGS=",
+        "\tbuild\tCGO_LDFLAGS=",
+        "\tbuild\tGOARCH=amd64",
+        "\tbuild\tGOOS=windows",
+        "\tbuild\tGOAMD64=v1",
+        "\tbuild\tvcs=git",
+        "\tbuild\tvcs.revision=db0ed04c39ab83c99ac22bb6fb1f080db032b21a",
+        "\tbuild\tvcs.time=2026-11-25T10:14:32Z",
+        "\tbuild\tvcs.modified=false"
+      ]
+    },
+    {
+      "name": "codecore-stage4-duplicates.exe",
+      "sha256": "6fef9d18203ddde6b1d7bb98996183819fc37b1dfa7210d895d65e6329ff5c06",
+      "go_version": [
+        "\tpath\tcodecore",
+        "\tmod\tcodecore\tv0.0.0-20261125102113-db06ddec3f90\t",
+        "\tbuild\t-buildmode=exe",
+        "\tbuild\t-compiler=gc",
+        "\tbuild\tCGO_ENABLED=1",
+        "\tbuild\tCGO_CFLAGS=",
+        "\tbuild\tCGO_CPPFLAGS=",
+        "\tbuild\tCGO_CXXFLAGS=",
+        "\tbuild\tCGO_LDFLAGS=",
+        "\tbuild\tGOARCH=amd64",
+        "\tbuild\tGOOS=windows",
+        "\tbuild\tGOAMD64=v1",
+        "\tbuild\tvcs=git",
+        "\tbuild\tvcs.revision=db06ddec3f90f435acb77cc1b4d07c544f37bb57",
+        "\tbuild\tvcs.time=2026-11-25T10:21:13Z",
+        "\tbuild\tvcs.modified=false"
+      ]
+    }
+  ],
+  "profiles": {
+    "docs-before-dedup": [
+      3,
+      [
+        "--split-identifiers",
+        "--categories",
+        "production,docs",
+        "--group-structure"
+      ]
+    ],
+    "docs-after-dedup": [
+      4,
+      [
+        "--split-identifiers",
+        "--categories",
+        "production,docs",
+        "--group-structure",
+        "--dedup-docs"
+      ]
+    ]
+  }
+}

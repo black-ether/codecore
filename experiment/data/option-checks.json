@@ -1,0 +1,14 @@
+[
+  "N1-rank-50 with all categories",
+  "N1-notests-20 with all categories",
+  "synthetic docs filter",
+  "synthetic fixtures filter",
+  "synthetic generated filter",
+  "synthetic production filter",
+  "synthetic tests filter",
+  "dedup preserves distinct source files",
+  "identifier component through --word",
+  "grouped text range and representative line",
+  "--group-structure rejects --count",
+  "--dedup-docs rejects --count"
+]

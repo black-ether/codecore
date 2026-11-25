@@ -1,0 +1,68 @@
+{
+  "eligible_files": 660,
+  "documents": 52958,
+  "tokens": {
+    "legacy": 279286,
+    "identifier_original": 276576,
+    "identifier_expanded": 374621
+  },
+  "file_categories": {
+    "docs": 123,
+    "fixtures": 315,
+    "generated": 1,
+    "production": 178,
+    "tests": 43
+  },
+  "unboosted_exact_term_frequency": {
+    "checksum": {
+      "legacy": 323,
+      "identifier_original": 316,
+      "identifier_expanded": 394
+    },
+    "collectkeys": {
+      "legacy": 3,
+      "identifier_original": 3,
+      "identifier_expanded": 3
+    },
+    "http": {
+      "legacy": 258,
+      "identifier_original": 227,
+      "identifier_expanded": 315
+    },
+    "include": {
+      "legacy": 300,
+      "identifier_original": 282,
+      "identifier_expanded": 353
+    },
+    "interrupt": {
+      "legacy": 13,
+      "identifier_original": 13,
+      "identifier_expanded": 21
+    },
+    "lines": {
+      "legacy": 53,
+      "identifier_original": 53,
+      "identifier_expanded": 121
+    },
+    "output": {
+      "legacy": 709,
+      "identifier_original": 673,
+      "identifier_expanded": 831
+    },
+    "read": {
+      "legacy": 180,
+      "identifier_original": 180,
+      "identifier_expanded": 247
+    },
+    "tasknamewithnamespace": {
+      "legacy": 7,
+      "identifier_original": 7,
+      "identifier_expanded": 7
+    },
+    "up": {
+      "legacy": 314,
+      "identifier_original": 311,
+      "identifier_expanded": 421
+    }
+  }
+}

@@ -1,0 +1,74 @@
+{
+  "original": [
+    "codecore: checkouts\\task-full-canonical\\website\\.vitepress\\blog.data.ts: unbalanced brackets; outline may be incomplete",
+    "codecore: checkouts\\task-full-canonical\\website\\.vitepress\\components\\homeExample.data.ts: unbalanced brackets; outline may be incomplete",
+    "codecore: checkouts\\task-full-canonical\\website\\.vitepress\\config.ts: unbalanced brackets; outline may be incomplete",
+    "codecore: checkouts\\task-full-canonical\\website\\.vitepress\\githubStars.data.ts: unbalanced brackets; outline may be incomplete",
+    "codecore: checkouts\\task-full-canonical\\website\\.vitepress\\plugins\\local-search.ts: unbalanced brackets; outline may be incomplete",
+    "codecore: checkouts\\task-full-canonical\\website\\docsearch.config.js: unbalanced brackets; outline may be incomplete",
+    "codecore: checkouts\\task-full-canonical\\website\\scripts\\check-markdown-links.mjs: unbalanced brackets; outline may be incomplete"
+  ],
+  "identifiers": [
+    "codecore: checkouts\\task-full-canonical\\website\\.vitepress\\blog.data.ts: unbalanced brackets; outline may be incomplete",
+    "codecore: checkouts\\task-full-canonical\\website\\.vitepress\\components\\homeExample.data.ts: unbalanced brackets; outline may be incomplete",
+    "codecore: checkouts\\task-full-canonical\\website\\.vitepress\\config.ts: unbalanced brackets; outline may be incomplete",
+    "codecore: checkouts\\task-full-canonical\\website\\.vitepress\\githubStars.data.ts: unbalanced brackets; outline may be incomplete",
+    "codecore: checkouts\\task-full-canonical\\website\\.vitepress\\plugins\\local-search.ts: unbalanced brackets; outline may be incomplete",
+    "codecore: checkouts\\task-full-canonical\\website\\docsearch.config.js: unbalanced brackets; outline may be incomplete",
+    "codecore: checkouts\\task-full-canonical\\website\\scripts\\check-markdown-links.mjs: unbalanced brackets; outline may be incomplete"
+  ],
+  "categories-only": [
+    "codecore: checkouts\\task-full-canonical\\website\\.vitepress\\blog.data.ts: unbalanced brackets; outline may be incomplete",
+    "codecore: checkouts\\task-full-canonical\\website\\.vitepress\\components\\homeExample.data.ts: unbalanced brackets; outline may be incomplete",
+    "codecore: checkouts\\task-full-canonical\\website\\.vitepress\\config.ts: unbalanced brackets; outline may be incomplete",
+    "codecore: checkouts\\task-full-canonical\\website\\.vitepress\\githubStars.data.ts: unbalanced brackets; outline may be incomplete",
+    "codecore: checkouts\\task-full-canonical\\website\\.vitepress\\plugins\\local-search.ts: unbalanced brackets; outline may be incomplete",
+    "codecore: checkouts\\task-full-canonical\\website\\docsearch.config.js: unbalanced brackets; outline may be incomplete",
+    "codecore: checkouts\\task-full-canonical\\website\\scripts\\check-markdown-links.mjs: unbalanced brackets; outline may be incomplete"
+  ],
+  "identifiers-categories": [
+    "codecore: checkouts\\task-full-canonical\\website\\.vitepress\\blog.data.ts: unbalanced brackets; outline may be incomplete",
+    "codecore: checkouts\\task-full-canonical\\website\\.vitepress\\components\\homeExample.data.ts: unbalanced brackets; outline may be incomplete",
+    "codecore: checkouts\\task-full-canonical\\website\\.vitepress\\config.ts: unbalanced brackets; outline may be incomplete",
+    "codecore: checkouts\\task-full-canonical\\website\\.vitepress\\githubStars.data.ts: unbalanced brackets; outline may be incomplete",
+    "codecore: checkouts\\task-full-canonical\\website\\.vitepress\\plugins\\local-search.ts: unbalanced brackets; outline may be incomplete",
+    "codecore: checkouts\\task-full-canonical\\website\\docsearch.config.js: unbalanced brackets; outline may be incomplete",
+    "codecore: checkouts\\task-full-canonical\\website\\scripts\\check-markdown-links.mjs: unbalanced brackets; outline may be incomplete"
+  ],
+  "grouping-only": [
+    "codecore: checkouts\\task-full-canonical\\website\\.vitepress\\blog.data.ts: unbalanced brackets; outline may be incomplete",
+    "codecore: checkouts\\task-full-canonical\\website\\.vitepress\\components\\homeExample.data.ts: unbalanced brackets; outline may be incomplete",
+    "codecore: checkouts\\task-full-canonical\\website\\.vitepress\\config.ts: unbalanced brackets; outline may be incomplete",
+    "codecore: checkouts\\task-full-canonical\\website\\.vitepress\\githubStars.data.ts: unbalanced brackets; outline may be incomplete",
+    "codecore: checkouts\\task-full-canonical\\website\\.vitepress\\plugins\\local-search.ts: unbalanced brackets; outline may be incomplete",
+    "codecore: checkouts\\task-full-canonical\\website\\docsearch.config.js: unbalanced brackets; outline may be incomplete",
+    "codecore: checkouts\\task-full-canonical\\website\\scripts\\check-markdown-links.mjs: unbalanced brackets; outline may be incomplete"
+  ],
+  "identifiers-categories-grouping": [
+    "codecore: checkouts\\task-full-canonical\\website\\.vitepress\\blog.data.ts: unbalanced brackets; outline may be incomplete",
+    "codecore: checkouts\\task-full-canonical\\website\\.vitepress\\components\\homeExample.data.ts: unbalanced brackets; outline may be incomplete",
+    "codecore: checkouts\\task-full-canonical\\website\\.vitepress\\config.ts: unbalanced brackets; outline may be incomplete",
+    "codecore: checkouts\\task-full-canonical\\website\\.vitepress\\githubStars.data.ts: unbalanced brackets; outline may be incomplete",
+    "codecore: checkouts\\task-full-canonical\\website\\.vitepress\\plugins\\local-search.ts: unbalanced brackets; outline may be incomplete",
+    "codecore: checkouts\\task-full-canonical\\website\\docsearch.config.js: unbalanced brackets; outline may be incomplete",
+    "codecore: checkouts\\task-full-canonical\\website\\scripts\\check-markdown-links.mjs: unbalanced brackets; outline may be incomplete"
+  ],
+  "dedup-only": [
+    "codecore: checkouts\\task-full-canonical\\website\\.vitepress\\blog.data.ts: unbalanced brackets; outline may be incomplete",
+    "codecore: checkouts\\task-full-canonical\\website\\.vitepress\\components\\homeExample.data.ts: unbalanced brackets; outline may be incomplete",
+    "codecore: checkouts\\task-full-canonical\\website\\.vitepress\\config.ts: unbalanced brackets; outline may be incomplete",
+    "codecore: checkouts\\task-full-canonical\\website\\.vitepress\\githubStars.data.ts: unbalanced brackets; outline may be incomplete",
+    "codecore: checkouts\\task-full-canonical\\website\\.vitepress\\plugins\\local-search.ts: unbalanced brackets; outline may be incomplete",
+    "codecore: checkouts\\task-full-canonical\\website\\docsearch.config.js: unbalanced brackets; outline may be incomplete",
+    "codecore: checkouts\\task-full-canonical\\website\\scripts\\check-markdown-links.mjs: unbalanced brackets; outline may be incomplete"
+  ],
+  "all": [
+    "codecore: checkouts\\task-full-canonical\\website\\.vitepress\\blog.data.ts: unbalanced brackets; outline may be incomplete",
+    "codecore: checkouts\\task-full-canonical\\website\\.vitepress\\components\\homeExample.data.ts: unbalanced brackets; outline may be incomplete",
+    "codecore: checkouts\\task-full-canonical\\website\\.vitepress\\config.ts: unbalanced brackets; outline may be incomplete",
+    "codecore: checkouts\\task-full-canonical\\website\\.vitepress\\githubStars.data.ts: unbalanced brackets; outline may be incomplete",
+    "codecore: checkouts\\task-full-canonical\\website\\.vitepress\\plugins\\local-search.ts: unbalanced brackets; outline may be incomplete",
+    "codecore: checkouts\\task-full-canonical\\website\\docsearch.config.js: unbalanced brackets; outline may be incomplete",
+    "codecore: checkouts\\task-full-canonical\\website\\scripts\\check-markdown-links.mjs: unbalanced brackets; outline may be incomplete"
+  ]
+}

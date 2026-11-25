@@ -1,0 +1,22 @@
+[
+  {
+    "stage": 1,
+    "commands": 10,
+    "status": "byte-identical stdout and stderr"
+  },
+  {
+    "stage": 2,
+    "commands": 10,
+    "status": "byte-identical stdout and stderr"
+  },
+  {
+    "stage": 3,
+    "commands": 10,
+    "status": "byte-identical stdout and stderr"
+  },
+  {
+    "stage": 4,
+    "commands": 94,
+    "status": "byte-identical stdout and stderr"
+  }
+]
