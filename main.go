@@ -33,6 +33,7 @@ Flags:
   --per-file           with --ask, return the best match per file only
   --word               with --ask, match whole words only (no prefix
                        matching, so "read" does not match "reader")
+  --categories LIST   with --ask, include production,docs,tests,fixtures,generated
   --no-tests           exclude test files (test_*.py, *_test.go,
                        *.spec.js, tests/ directories, and so on)
   --filename-only      with --ask, print only the names of files
@@ -104,6 +105,7 @@ func run(args []string) int {
 	perFileFlag := fs.Bool("per-file", false, "best match per file for --ask")
 	splitIdentifiersFlag := fs.Bool("split-identifiers", false, "index compound identifier parts for --ask")
 	wordFlag := fs.Bool("word", false, "whole-word only for --ask (no prefix matching)")
+	categoriesFlag := fs.String("categories", "", "comma-separated source categories for --ask")
 	noTestsFlag := fs.Bool("no-tests", false, "exclude test files")
 	filenameOnlyFlag := fs.Bool("filename-only", false, "with --ask, print only matching file names")
 	countFlag := fs.Bool("count", false, "with --ask, print match counts per file")
@@ -121,13 +123,15 @@ func run(args []string) int {
 		return 2
 	}
 	paths := fs.Args()
-	var patternSet, askSet bool
+	var patternSet, askSet, categoriesSet bool
 	fs.Visit(func(f *flag.Flag) {
 		switch f.Name {
 		case "pattern":
 			patternSet = true
 		case "ask":
 			askSet = true
+		case "categories":
+			categoriesSet = true
 		}
 	})
 	var atoms []atom
@@ -140,6 +144,19 @@ func run(args []string) int {
 		atoms, err = parsePattern(strings.TrimSpace(*patternFlag))
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "codecore: --pattern: %v\n", err)
+			return 2
+		}
+	}
+	var categories map[string]bool
+	if categoriesSet {
+		if *askFlag == "" {
+			fmt.Fprintln(os.Stderr, "codecore: --categories needs --ask")
+			return 2
+		}
+		var err error
+		categories, err = parseCategories(*categoriesFlag)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "codecore: --categories: %v\n", err)
 			return 2
 		}
 	}
@@ -239,6 +256,9 @@ func run(args []string) int {
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "codecore: %v\n", err)
 			return 1
+		}
+		if categories != nil && !categories[sourceCategory(f, src)] {
+			continue
 		}
 		o, err := ext.Extract(f, src)
 		if err != nil {
