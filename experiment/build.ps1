@@ -1,4 +1,4 @@
-param([string]$Artifacts)
+param([string]$Artifacts, [switch]$Contextual)
 
 $ErrorActionPreference = 'Stop'
 $root = Split-Path -Parent $PSScriptRoot
@@ -6,7 +6,8 @@ if (!$Artifacts) { $Artifacts = Join-Path $root 'testdb/experiment-artifacts' }
 $Artifacts = [IO.Path]::GetFullPath($Artifacts)
 $bin = Join-Path $Artifacts 'bin'
 $cache = Join-Path $Artifacts 'go-cache'
-$stages = Get-Content -LiteralPath (Join-Path $PSScriptRoot 'stages.json') -Raw | ConvertFrom-Json
+$manifest = if ($Contextual) { 'contextual_stages.json' } else { 'stages.json' }
+$stages = Get-Content -LiteralPath (Join-Path $PSScriptRoot $manifest) -Raw | ConvertFrom-Json
 New-Item -ItemType Directory -Force $bin, $cache | Out-Null
 
 $previousCache = $env:GOCACHE
@@ -14,7 +15,7 @@ try {
     $env:GOCACHE = $cache
     for ($index = 0; $index -lt $stages.Count; $index++) {
         $stage = $stages[$index]
-        $name = "stage$($index + 1)-$($stage.name)"
+        $name = if ($Contextual) { $stage.name } else { "stage$($index + 1)-$($stage.name)" }
         $checkout = Join-Path $Artifacts $name
         if (!(Test-Path -LiteralPath $checkout)) {
             git -C $root worktree add --detach $checkout $stage.commit

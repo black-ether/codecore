@@ -97,6 +97,10 @@ a single line shows just its line (`[L:50]`). Use `--top` to set
 the result limit (default 5) and `--format json` for JSON output
 (the JSON object carries an `end` field alongside `line`).
 
+Use `--explain-ranking` with `--ask --format json` to inspect document
+length, distinct query-term coverage, and each term’s BM25 and
+whole-word contributions.
+
 ```sh
 go run . --ask "sort" --top 3 testdb/go
 ```

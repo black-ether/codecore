@@ -1,0 +1,192 @@
+{
+  "corpus_commit": "b5aef1c287a9be8038347a17646bdf4bc7185bce",
+  "verified_task_blobs": 982,
+  "powerpath_commit": "210d6a1b63144ff0533ab89737f043c6dc7c3ce7",
+  "powerpath_anchor_file": "Lib/PowerPath/PP.Execution.psm1",
+  "powerpath_anchor_sha256": "e01386c2e15c998b930de749a9856bdf83f9ccd8d74cc187e0623a35c9a54659",
+  "samples": 3,
+  "seed": 4837,
+  "limits": [
+    5,
+    10
+  ],
+  "profiles": {
+    "original": [
+      0,
+      []
+    ],
+    "production": [
+      1,
+      [
+        "--split-identifiers",
+        "--categories",
+        "production"
+      ]
+    ],
+    "grouped": [
+      2,
+      [
+        "--split-identifiers",
+        "--categories",
+        "production",
+        "--group-structure"
+      ]
+    ],
+    "coverage": [
+      4,
+      [
+        "--split-identifiers",
+        "--categories",
+        "production",
+        "--group-structure",
+        "--rank-mode",
+        "coverage"
+      ]
+    ],
+    "context": [
+      4,
+      [
+        "--split-identifiers",
+        "--categories",
+        "production",
+        "--group-structure",
+        "--rank-mode",
+        "context"
+      ]
+    ],
+    "unit": [
+      4,
+      [
+        "--split-identifiers",
+        "--categories",
+        "production",
+        "--group-structure",
+        "--rank-mode",
+        "unit"
+      ]
+    ],
+    "category": [
+      4,
+      [
+        "--split-identifiers",
+        "--categories",
+        "production",
+        "--group-structure",
+        "--rank-mode",
+        "category"
+      ]
+    ]
+  },
+  "binaries": [
+    {
+      "binary": "codecore-26b8bde.exe",
+      "sha256": "2581653966ac017d4f4ad1008902247c456f220178022ad045fc80f62c355178",
+      "go_version": [
+        "\tpath\tcodecore",
+        "\tmod\tcodecore\tv0.0.0-20261124055052-26b8bdecaba0\t",
+        "\tbuild\t-buildmode=exe",
+        "\tbuild\t-compiler=gc",
+        "\tbuild\t-trimpath=true",
+        "\tbuild\tCGO_ENABLED=0",
+        "\tbuild\tGOARCH=amd64",
+        "\tbuild\tGOOS=windows",
+        "\tbuild\tGOAMD64=v1",
+        "\tbuild\tvcs=git",
+        "\tbuild\tvcs.revision=26b8bdecaba0531c5b84746761bab214bb457a64",
+        "\tbuild\tvcs.time=2026-11-24T05:50:52Z",
+        "\tbuild\tvcs.modified=false"
+      ],
+      "matches_prior_sha256": true
+    },
+    {
+      "binary": "codecore-stage2-categories.exe",
+      "sha256": "80c12d81eda99a0901f725beb46d9fab23a56aa602b54372efab9122900c4bb0",
+      "go_version": [
+        "\tpath\tcodecore",
+        "\tmod\tcodecore\tv0.0.0-20261125100623-fe18d0b01d1f\t",
+        "\tbuild\t-buildmode=exe",
+        "\tbuild\t-compiler=gc",
+        "\tbuild\tCGO_ENABLED=1",
+        "\tbuild\tCGO_CFLAGS=",
+        "\tbuild\tCGO_CPPFLAGS=",
+        "\tbuild\tCGO_CXXFLAGS=",
+        "\tbuild\tCGO_LDFLAGS=",
+        "\tbuild\tGOARCH=amd64",
+        "\tbuild\tGOOS=windows",
+        "\tbuild\tGOAMD64=v1",
+        "\tbuild\tvcs=git",
+        "\tbuild\tvcs.revision=fe18d0b01d1fb09fceca878927efc78486f90200",
+        "\tbuild\tvcs.time=2026-11-25T10:06:23Z",
+        "\tbuild\tvcs.modified=false"
+      ],
+      "matches_prior_sha256": true
+    },
+    {
+      "binary": "codecore-stage3-structure.exe",
+      "sha256": "61fcff2933ce8aa4153619beffc9c6ef51e1525df0661dcb24de8ffa8e27e56a",
+      "go_version": [
+        "\tpath\tcodecore",
+        "\tmod\tcodecore\tv0.0.0-20261125101432-db0ed04c39ab\t",
+        "\tbuild\t-buildmode=exe",
+        "\tbuild\t-compiler=gc",
+        "\tbuild\tCGO_ENABLED=1",
+        "\tbuild\tCGO_CFLAGS=",
+        "\tbuild\tCGO_CPPFLAGS=",
+        "\tbuild\tCGO_CXXFLAGS=",
+        "\tbuild\tCGO_LDFLAGS=",
+        "\tbuild\tGOARCH=amd64",
+        "\tbuild\tGOOS=windows",
+        "\tbuild\tGOAMD64=v1",
+        "\tbuild\tvcs=git",
+        "\tbuild\tvcs.revision=db0ed04c39ab83c99ac22bb6fb1f080db032b21a",
+        "\tbuild\tvcs.time=2026-11-25T10:14:32Z",
+        "\tbuild\tvcs.modified=false"
+      ],
+      "matches_prior_sha256": true
+    },
+    {
+      "binary": "codecore-ranking-diagnostics.exe",
+      "sha256": "38d5a75cc7b195659c8d4cb9fdd197446cde71189c53cd87e846651864f7632a",
+      "go_version": [
+        "\tpath\tcodecore",
+        "\tmod\tcodecore\tv0.0.0-20261125120826-c3ccfaf62a70\t",
+        "\tbuild\t-buildmode=exe",
+        "\tbuild\t-compiler=gc",
+        "\tbuild\tCGO_ENABLED=1",
+        "\tbuild\tCGO_CFLAGS=",
+        "\tbuild\tCGO_CPPFLAGS=",
+        "\tbuild\tCGO_CXXFLAGS=",
+        "\tbuild\tCGO_LDFLAGS=",
+        "\tbuild\tGOARCH=amd64",
+        "\tbuild\tGOOS=windows",
+        "\tbuild\tGOAMD64=v1",
+        "\tbuild\tvcs=git",
+        "\tbuild\tvcs.revision=c3ccfaf62a7075188a80f703d14499ec4a8cee97",
+        "\tbuild\tvcs.time=2026-11-25T12:08:26Z",
+        "\tbuild\tvcs.modified=false"
+      ]
+    },
+    {
+      "binary": "codecore-contextual-prototypes.exe",
+      "sha256": "59306ad42ea1f0dbc2a72471dd57a54c99a67e199b5b9a41e915f5bb646630dd",
+      "go_version": [
+        "\tpath\tcodecore",
+        "\tmod\tcodecore\tv0.0.0-20261125121133-d51507041d45\t",
+        "\tbuild\t-buildmode=exe",
+        "\tbuild\t-compiler=gc",
+        "\tbuild\tCGO_ENABLED=1",
+        "\tbuild\tCGO_CFLAGS=",
+        "\tbuild\tCGO_CPPFLAGS=",
+        "\tbuild\tCGO_CXXFLAGS=",
+        "\tbuild\tCGO_LDFLAGS=",
+        "\tbuild\tGOARCH=amd64",
+        "\tbuild\tGOOS=windows",
+        "\tbuild\tGOAMD64=v1",
+        "\tbuild\tvcs=git",
+        "\tbuild\tvcs.revision=d51507041d45359bc84534a1ca2bdcc8cba7db84",
+        "\tbuild\tvcs.time=2026-11-25T12:11:33Z",
+        "\tbuild\tvcs.modified=false"
+      ]
+    }
+  ]
+}

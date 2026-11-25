@@ -1,0 +1,2203 @@
+[
+  {
+    "query": "X1",
+    "text": "checksum freshness skip execution",
+    "profile": "legacy",
+    "results": [
+      {
+        "explanation": {
+          "documentLength": 7,
+          "meanLength": 5.273726349182371,
+          "documents": 52958,
+          "covered": 2,
+          "terms": [
+            {
+              "term": "skip",
+              "tf": 1,
+              "df": 166,
+              "idf": 5.762277998836894,
+              "bm25": 5.081778774502337,
+              "bonus": 3
+            },
+            {
+              "term": "execution",
+              "tf": 1,
+              "df": 158,
+              "idf": 5.811518714940058,
+              "bm25": 5.125204382566519,
+              "bonus": 3
+            }
+          ]
+        },
+        "rank": 1,
+        "file": "checkouts\\task-full-canonical\\website\\src\\latest\\docs\\guide\\conditional-execution.md",
+        "line": 23,
+        "end": 23,
+        "name": "conditional-execution-with-if",
+        "text": "## Skip optional work {#conditional-execution-with-if}",
+        "score": 16.206983157068855
+      },
+      {
+        "explanation": {
+          "documentLength": 7,
+          "meanLength": 5.273726349182371,
+          "documents": 52958,
+          "covered": 2,
+          "terms": [
+            {
+              "term": "skip",
+              "tf": 1,
+              "df": 166,
+              "idf": 5.762277998836894,
+              "bm25": 5.081778774502337,
+              "bonus": 3
+            },
+            {
+              "term": "execution",
+              "tf": 1,
+              "df": 158,
+              "idf": 5.811518714940058,
+              "bm25": 5.125204382566519,
+              "bonus": 3
+            }
+          ]
+        },
+        "rank": 2,
+        "file": "checkouts\\task-full-canonical\\website\\src\\next\\docs\\guide\\conditional-execution.md",
+        "line": 23,
+        "end": 23,
+        "name": "conditional-execution-with-if",
+        "text": "## Skip optional work {#conditional-execution-with-if}",
+        "score": 16.206983157068855
+      },
+      {
+        "explanation": {
+          "documentLength": 8,
+          "meanLength": 5.273726349182371,
+          "documents": 52958,
+          "covered": 2,
+          "terms": [
+            {
+              "term": "skip",
+              "tf": 1,
+              "df": 166,
+              "idf": 5.762277998836894,
+              "bm25": 4.756390927680469,
+              "bonus": 3
+            },
+            {
+              "term": "execution",
+              "tf": 1,
+              "df": 158,
+              "idf": 5.811518714940058,
+              "bm25": 4.797035980798845,
+              "bonus": 3
+            }
+          ]
+        },
+        "rank": 3,
+        "file": "checkouts\\task-full-canonical\\website\\src\\latest\\docs\\guide\\conditional-execution.md",
+        "line": 18,
+        "end": 18,
+        "name": "if",
+        "text": "| Skip optional work               | [`if`](#conditional-execution-with-if)                                             …",
+        "score": 15.553426908479313
+      },
+      {
+        "explanation": {
+          "documentLength": 8,
+          "meanLength": 5.273726349182371,
+          "documents": 52958,
+          "covered": 2,
+          "terms": [
+            {
+              "term": "skip",
+              "tf": 1,
+              "df": 166,
+              "idf": 5.762277998836894,
+              "bm25": 4.756390927680469,
+              "bonus": 3
+            },
+            {
+              "term": "execution",
+              "tf": 1,
+              "df": 158,
+              "idf": 5.811518714940058,
+              "bm25": 4.797035980798845,
+              "bonus": 3
+            }
+          ]
+        },
+        "rank": 4,
+        "file": "checkouts\\task-full-canonical\\website\\src\\next\\docs\\guide\\conditional-execution.md",
+        "line": 18,
+        "end": 18,
+        "name": "if",
+        "text": "| Skip optional work               | [`if`](#conditional-execution-with-if)                                             …",
+        "score": 15.553426908479313
+      },
+      {
+        "explanation": {
+          "documentLength": 8,
+          "meanLength": 5.273726349182371,
+          "documents": 52958,
+          "covered": 2,
+          "terms": [
+            {
+              "term": "skip",
+              "tf": 1,
+              "df": 166,
+              "idf": 5.762277998836894,
+              "bm25": 4.756390927680469,
+              "bonus": 0
+            },
+            {
+              "term": "execution",
+              "tf": 2,
+              "df": 158,
+              "idf": 5.811518714940058,
+              "bm25": 6.976501652422579,
+              "bonus": 3
+            }
+          ]
+        },
+        "rank": 5,
+        "file": "checkouts\\task-full-canonical\\website\\src\\latest\\docs\\guide\\index.md",
+        "line": 45,
+        "end": 47,
+        "name": "execution",
+        "text": "- [Conditional execution](./conditional-execution.md): skipping optional work",
+        "score": 14.732892580103048
+      },
+      {
+        "explanation": {
+          "documentLength": 9,
+          "meanLength": 5.273726349182371,
+          "documents": 52958,
+          "definitionTerms": [
+            "checksum"
+          ],
+          "covered": 1,
+          "terms": [
+            {
+              "term": "checksum",
+              "tf": 3,
+              "df": 355,
+              "idf": 5.0037480590140975,
+              "bm25": 6.829055357696925,
+              "bonus": 3
+            }
+          ]
+        },
+        "rank": 62,
+        "file": "checkouts\\task-full-canonical\\internal\\fingerprint\\sources_checksum.go",
+        "line": 95,
+        "end": 123,
+        "name": "checksum",
+        "text": "func (c *ChecksumChecker) checksum(t *ast.Task) (string, error) {",
+        "score": 9.829055357696925
+      },
+      {
+        "explanation": {
+          "documentLength": 9,
+          "meanLength": 5.273726349182371,
+          "documents": 52958,
+          "definitionTerms": [
+            "isuptodate"
+          ],
+          "covered": 1,
+          "terms": [
+            {
+              "term": "checksum",
+              "tf": 1,
+              "df": 355,
+              "idf": 5.0037480590140975,
+              "bm25": 3.8817250686735036,
+              "bonus": 0
+            }
+          ]
+        },
+        "rank": 567,
+        "file": "checkouts\\task-full-canonical\\internal\\fingerprint\\sources_checksum.go",
+        "line": 31,
+        "end": 73,
+        "name": "IsUpToDate",
+        "text": "func (checker *ChecksumChecker) IsUpToDate(t *ast.Task) (bool, error) {",
+        "score": 3.8817250686735036
+      }
+    ]
+  },
+  {
+    "query": "X1",
+    "text": "checksum freshness skip execution",
+    "profile": "split-production",
+    "results": [
+      {
+        "explanation": {
+          "documentLength": 4,
+          "meanLength": 5.023654159869494,
+          "documents": 22068,
+          "definitionTerms": [
+            "include",
+            "checksum"
+          ],
+          "covered": 1,
+          "terms": [
+            {
+              "term": "checksum",
+              "tf": 4,
+              "df": 130,
+              "idf": 5.1305559610854115,
+              "bm25": 8.999881175573933,
+              "bonus": 3
+            }
+          ]
+        },
+        "rank": 1,
+        "file": "checkouts\\task-full-canonical\\taskfile\\ast\\include.go",
+        "line": 208,
+        "end": 208,
+        "name": "include.Checksum",
+        "text": "include.Checksum = includedTaskfile.Checksum",
+        "score": 11.999881175573933,
+        "parents": [
+          "func (include *Include) UnmarshalYAML(node *yaml.Node) error {",
+          "switch node.Kind {"
+        ]
+      },
+      {
+        "explanation": {
+          "documentLength": 4,
+          "meanLength": 5.023654159869494,
+          "documents": 22068,
+          "definitionTerms": [
+            "n",
+            "checksum"
+          ],
+          "covered": 1,
+          "terms": [
+            {
+              "term": "checksum",
+              "tf": 4,
+              "df": 130,
+              "idf": 5.1305559610854115,
+              "bm25": 8.999881175573933,
+              "bonus": 3
+            }
+          ]
+        },
+        "rank": 2,
+        "file": "checkouts\\task-full-canonical\\taskfile\\options.go",
+        "line": 211,
+        "end": 211,
+        "name": "n.checksum",
+        "text": "n.checksum = o.checksum",
+        "score": 11.999881175573933,
+        "parents": [
+          "func (o *checksumOption) ApplyToBaseNode(n *baseNode) {"
+        ]
+      },
+      {
+        "explanation": {
+          "documentLength": 3,
+          "meanLength": 5.023654159869494,
+          "documents": 22068,
+          "definitionTerms": [
+            "checksum"
+          ],
+          "covered": 1,
+          "terms": [
+            {
+              "term": "checksum",
+              "tf": 3,
+              "df": 130,
+              "idf": 5.1305559610854115,
+              "bm25": 8.823985778850147,
+              "bonus": 3
+            }
+          ]
+        },
+        "rank": 3,
+        "file": "checkouts\\task-full-canonical\\install-task.sh",
+        "line": 377,
+        "end": 377,
+        "name": "CHECKSUM",
+        "text": "CHECKSUM=task_checksums.txt",
+        "score": 11.823985778850147
+      },
+      {
+        "explanation": {
+          "documentLength": 3,
+          "meanLength": 5.023654159869494,
+          "documents": 22068,
+          "definitionTerms": [
+            "checksum"
+          ],
+          "covered": 1,
+          "terms": [
+            {
+              "term": "checksum",
+              "tf": 3,
+              "df": 130,
+              "idf": 5.1305559610854115,
+              "bm25": 8.823985778850147,
+              "bonus": 3
+            }
+          ]
+        },
+        "rank": 4,
+        "file": "checkouts\\task-full-canonical\\website\\src\\public\\install.sh",
+        "line": 377,
+        "end": 377,
+        "name": "CHECKSUM",
+        "text": "CHECKSUM=task_checksums.txt",
+        "score": 11.823985778850147
+      },
+      {
+        "explanation": {
+          "documentLength": 2,
+          "meanLength": 5.023654159869494,
+          "documents": 22068,
+          "covered": 1,
+          "terms": [
+            {
+              "term": "skip",
+              "tf": 1,
+              "df": 32,
+              "idf": 6.520689098512468,
+              "bm25": 8.650710642485363,
+              "bonus": 3
+            }
+          ]
+        },
+        "rank": 5,
+        "file": "checkouts\\task-full-canonical\\.goreleaser.yml",
+        "line": 209,
+        "end": 209,
+        "name": "skip",
+        "text": "skip: '{{ .IsNightly }}'",
+        "score": 11.650710642485363,
+        "parents": [
+          "announce:"
+        ]
+      },
+      {
+        "explanation": {
+          "documentLength": 9,
+          "meanLength": 5.023654159869494,
+          "documents": 22068,
+          "definitionTerms": [
+            "checksum"
+          ],
+          "covered": 1,
+          "terms": [
+            {
+              "term": "checksum",
+              "tf": 4,
+              "df": 130,
+              "idf": 5.1305559610854115,
+              "bm25": 7.636341455034436,
+              "bonus": 3
+            }
+          ]
+        },
+        "rank": 20,
+        "file": "checkouts\\task-full-canonical\\internal\\fingerprint\\sources_checksum.go",
+        "line": 95,
+        "end": 123,
+        "name": "checksum",
+        "text": "func (c *ChecksumChecker) checksum(t *ast.Task) (string, error) {",
+        "score": 10.636341455034437
+      },
+      {
+        "explanation": {
+          "documentLength": 11,
+          "meanLength": 5.023654159869494,
+          "documents": 22068,
+          "definitionTerms": [
+            "err"
+          ],
+          "covered": 1,
+          "terms": [
+            {
+              "term": "execution",
+              "tf": 1,
+              "df": 54,
+              "idf": 6.003728486178962,
+              "bm25": 4.038369559425723,
+              "bonus": 0
+            }
+          ]
+        },
+        "rank": 184,
+        "file": "checkouts\\task-full-canonical\\task.go",
+        "line": 206,
+        "end": 286,
+        "name": "err",
+        "text": "if err = e.startExecution(ctx, t, func(ctx context.Context) error {",
+        "score": 4.038369559425723,
+        "parents": [
+          "func (e *Executor) RunTask(ctx context.Context, call *Call) error {"
+        ]
+      },
+      {
+        "explanation": {
+          "documentLength": 9,
+          "meanLength": 5.023654159869494,
+          "documents": 22068,
+          "definitionTerms": [
+            "isuptodate"
+          ],
+          "covered": 1,
+          "terms": [
+            {
+              "term": "checksum",
+              "tf": 1,
+              "df": 130,
+              "idf": 5.1305559610854115,
+              "bm25": 3.875611555892755,
+              "bonus": 0
+            }
+          ]
+        },
+        "rank": 185,
+        "file": "checkouts\\task-full-canonical\\internal\\fingerprint\\sources_checksum.go",
+        "line": 31,
+        "end": 73,
+        "name": "IsUpToDate",
+        "text": "func (checker *ChecksumChecker) IsUpToDate(t *ast.Task) (bool, error) {",
+        "score": 3.875611555892755
+      }
+    ]
+  },
+  {
+    "query": "X1",
+    "text": "checksum freshness skip execution",
+    "profile": "grouped",
+    "results": [
+      {
+        "explanation": {
+          "documentLength": 4,
+          "meanLength": 5.023654159869494,
+          "documents": 22068,
+          "definitionTerms": [
+            "include",
+            "checksum"
+          ],
+          "covered": 1,
+          "terms": [
+            {
+              "term": "checksum",
+              "tf": 4,
+              "df": 130,
+              "idf": 5.1305559610854115,
+              "bm25": 8.999881175573933,
+              "bonus": 3
+            }
+          ]
+        },
+        "rank": 1,
+        "file": "checkouts\\task-full-canonical\\taskfile\\ast\\include.go",
+        "line": 208,
+        "end": 208,
+        "name": "include.Checksum",
+        "text": "include.Checksum = includedTaskfile.Checksum",
+        "score": 11.999881175573933,
+        "unit": {
+          "kind": "method",
+          "name": "(*Include).UnmarshalYAML",
+          "start": 170,
+          "end": 212
+        }
+      },
+      {
+        "explanation": {
+          "documentLength": 4,
+          "meanLength": 5.023654159869494,
+          "documents": 22068,
+          "definitionTerms": [
+            "n",
+            "checksum"
+          ],
+          "covered": 1,
+          "terms": [
+            {
+              "term": "checksum",
+              "tf": 4,
+              "df": 130,
+              "idf": 5.1305559610854115,
+              "bm25": 8.999881175573933,
+              "bonus": 3
+            }
+          ]
+        },
+        "rank": 2,
+        "file": "checkouts\\task-full-canonical\\taskfile\\options.go",
+        "line": 211,
+        "end": 211,
+        "name": "n.checksum",
+        "text": "n.checksum = o.checksum",
+        "score": 11.999881175573933,
+        "unit": {
+          "kind": "method",
+          "name": "(*checksumOption).ApplyToBaseNode",
+          "start": 210,
+          "end": 211
+        }
+      },
+      {
+        "explanation": {
+          "documentLength": 3,
+          "meanLength": 5.023654159869494,
+          "documents": 22068,
+          "definitionTerms": [
+            "checksum"
+          ],
+          "covered": 1,
+          "terms": [
+            {
+              "term": "checksum",
+              "tf": 3,
+              "df": 130,
+              "idf": 5.1305559610854115,
+              "bm25": 8.823985778850147,
+              "bonus": 3
+            }
+          ]
+        },
+        "rank": 3,
+        "file": "checkouts\\task-full-canonical\\install-task.sh",
+        "line": 377,
+        "end": 377,
+        "name": "CHECKSUM",
+        "text": "CHECKSUM=task_checksums.txt",
+        "score": 11.823985778850147
+      },
+      {
+        "explanation": {
+          "documentLength": 3,
+          "meanLength": 5.023654159869494,
+          "documents": 22068,
+          "definitionTerms": [
+            "checksum"
+          ],
+          "covered": 1,
+          "terms": [
+            {
+              "term": "checksum",
+              "tf": 3,
+              "df": 130,
+              "idf": 5.1305559610854115,
+              "bm25": 8.823985778850147,
+              "bonus": 3
+            }
+          ]
+        },
+        "rank": 4,
+        "file": "checkouts\\task-full-canonical\\website\\src\\public\\install.sh",
+        "line": 377,
+        "end": 377,
+        "name": "CHECKSUM",
+        "text": "CHECKSUM=task_checksums.txt",
+        "score": 11.823985778850147
+      },
+      {
+        "explanation": {
+          "documentLength": 2,
+          "meanLength": 5.023654159869494,
+          "documents": 22068,
+          "covered": 1,
+          "terms": [
+            {
+              "term": "skip",
+              "tf": 1,
+              "df": 32,
+              "idf": 6.520689098512468,
+              "bm25": 8.650710642485363,
+              "bonus": 3
+            }
+          ]
+        },
+        "rank": 5,
+        "file": "checkouts\\task-full-canonical\\.goreleaser.yml",
+        "line": 209,
+        "end": 209,
+        "name": "skip",
+        "text": "skip: '{{ .IsNightly }}'",
+        "score": 11.650710642485363,
+        "parents": [
+          "announce:"
+        ]
+      },
+      {
+        "explanation": {
+          "documentLength": 9,
+          "meanLength": 5.023654159869494,
+          "documents": 22068,
+          "definitionTerms": [
+            "checksum"
+          ],
+          "covered": 1,
+          "terms": [
+            {
+              "term": "checksum",
+              "tf": 4,
+              "df": 130,
+              "idf": 5.1305559610854115,
+              "bm25": 7.636341455034436,
+              "bonus": 3
+            }
+          ]
+        },
+        "rank": 16,
+        "file": "checkouts\\task-full-canonical\\internal\\fingerprint\\sources_checksum.go",
+        "line": 95,
+        "end": 123,
+        "name": "checksum",
+        "text": "func (c *ChecksumChecker) checksum(t *ast.Task) (string, error) {",
+        "score": 10.636341455034437,
+        "unit": {
+          "kind": "method",
+          "name": "(*ChecksumChecker).checksum",
+          "start": 95,
+          "end": 123
+        }
+      }
+    ]
+  },
+  {
+    "query": "N3",
+    "text": "How does Task decide whether to execute or skip a task using checksum freshness?",
+    "profile": "legacy",
+    "results": [
+      {
+        "explanation": {
+          "documentLength": 6,
+          "meanLength": 5.273726349182371,
+          "documents": 52958,
+          "covered": 2,
+          "terms": [
+            {
+              "term": "task",
+              "tf": 2,
+              "df": 9055,
+              "idf": 1.7661457213528022,
+              "bm25": 2.337897802947926,
+              "bonus": 3
+            },
+            {
+              "term": "skip",
+              "tf": 2,
+              "df": 166,
+              "idf": 5.762277998836894,
+              "bm25": 7.627692840167903,
+              "bonus": 3
+            },
+            {
+              "term": "task",
+              "tf": 2,
+              "df": 9055,
+              "idf": 1.7661457213528022,
+              "bm25": 2.337897802947926,
+              "bonus": 3
+            }
+          ]
+        },
+        "rank": 1,
+        "file": "checkouts\\task-full-canonical\\testdata\\if\\Taskfile.yml",
+        "line": 67,
+        "end": 71,
+        "name": "skip-task-call",
+        "text": "skip-task-call:",
+        "score": 21.303488446063753,
+        "parents": [
+          "tasks:"
+        ]
+      },
+      {
+        "explanation": {
+          "documentLength": 4,
+          "meanLength": 5.273726349182371,
+          "documents": 52958,
+          "definitionTerms": [
+            "checksum"
+          ],
+          "covered": 2,
+          "terms": [
+            {
+              "term": "task",
+              "tf": 1,
+              "df": 9055,
+              "idf": 1.7661457213528022,
+              "bm25": 1.9597817069732015,
+              "bonus": 3
+            },
+            {
+              "term": "task",
+              "tf": 1,
+              "df": 9055,
+              "idf": 1.7661457213528022,
+              "bm25": 1.9597817069732015,
+              "bonus": 3
+            },
+            {
+              "term": "checksum",
+              "tf": 3,
+              "df": 355,
+              "idf": 5.0037480590140975,
+              "bm25": 8.292194653371563,
+              "bonus": 3
+            }
+          ]
+        },
+        "rank": 2,
+        "file": "checkouts\\task-full-canonical\\install-task.sh",
+        "line": 377,
+        "end": 377,
+        "name": "CHECKSUM",
+        "text": "CHECKSUM=task_checksums.txt",
+        "score": 21.211758067317966
+      },
+      {
+        "explanation": {
+          "documentLength": 4,
+          "meanLength": 5.273726349182371,
+          "documents": 52958,
+          "definitionTerms": [
+            "checksum"
+          ],
+          "covered": 2,
+          "terms": [
+            {
+              "term": "task",
+              "tf": 1,
+              "df": 9055,
+              "idf": 1.7661457213528022,
+              "bm25": 1.9597817069732015,
+              "bonus": 3
+            },
+            {
+              "term": "task",
+              "tf": 1,
+              "df": 9055,
+              "idf": 1.7661457213528022,
+              "bm25": 1.9597817069732015,
+              "bonus": 3
+            },
+            {
+              "term": "checksum",
+              "tf": 3,
+              "df": 355,
+              "idf": 5.0037480590140975,
+              "bm25": 8.292194653371563,
+              "bonus": 3
+            }
+          ]
+        },
+        "rank": 3,
+        "file": "checkouts\\task-full-canonical\\website\\src\\public\\install.sh",
+        "line": 377,
+        "end": 377,
+        "name": "CHECKSUM",
+        "text": "CHECKSUM=task_checksums.txt",
+        "score": 21.211758067317966
+      },
+      {
+        "explanation": {
+          "documentLength": 14,
+          "meanLength": 5.273726349182371,
+          "documents": 52958,
+          "definitionTerms": [
+            "mode"
+          ],
+          "covered": 3,
+          "terms": [
+            {
+              "term": "task",
+              "tf": 1,
+              "df": 9055,
+              "idf": 1.7661457213528022,
+              "bm25": 1.0532142441302779,
+              "bonus": 3
+            },
+            {
+              "term": "skip",
+              "tf": 1,
+              "df": 166,
+              "idf": 5.762277998836894,
+              "bm25": 3.4362471871035463,
+              "bonus": 3
+            },
+            {
+              "term": "task",
+              "tf": 1,
+              "df": 9055,
+              "idf": 1.7661457213528022,
+              "bm25": 1.0532142441302779,
+              "bonus": 3
+            },
+            {
+              "term": "checksum",
+              "tf": 1,
+              "df": 355,
+              "idf": 5.0037480590140975,
+              "bm25": 2.983909349086008,
+              "bonus": 3
+            }
+          ]
+        },
+        "rank": 4,
+        "file": "checkouts\\task-full-canonical\\website\\src\\latest\\docs\\guide\\up-to-date.md",
+        "line": 214,
+        "end": 214,
+        "name": "MODE",
+        "text": "own executable and saved checksum, so a later `task build MODE=debug` can skip",
+        "score": 20.52658502445011
+      },
+      {
+        "explanation": {
+          "documentLength": 14,
+          "meanLength": 5.273726349182371,
+          "documents": 52958,
+          "definitionTerms": [
+            "mode"
+          ],
+          "covered": 3,
+          "terms": [
+            {
+              "term": "task",
+              "tf": 1,
+              "df": 9055,
+              "idf": 1.7661457213528022,
+              "bm25": 1.0532142441302779,
+              "bonus": 3
+            },
+            {
+              "term": "skip",
+              "tf": 1,
+              "df": 166,
+              "idf": 5.762277998836894,
+              "bm25": 3.4362471871035463,
+              "bonus": 3
+            },
+            {
+              "term": "task",
+              "tf": 1,
+              "df": 9055,
+              "idf": 1.7661457213528022,
+              "bm25": 1.0532142441302779,
+              "bonus": 3
+            },
+            {
+              "term": "checksum",
+              "tf": 1,
+              "df": 355,
+              "idf": 5.0037480590140975,
+              "bm25": 2.983909349086008,
+              "bonus": 3
+            }
+          ]
+        },
+        "rank": 5,
+        "file": "checkouts\\task-full-canonical\\website\\src\\next\\docs\\guide\\up-to-date.md",
+        "line": 214,
+        "end": 214,
+        "name": "MODE",
+        "text": "own executable and saved checksum, so a later `task build MODE=debug` can skip",
+        "score": 20.52658502445011
+      },
+      {
+        "explanation": {
+          "documentLength": 9,
+          "meanLength": 5.273726349182371,
+          "documents": 52958,
+          "definitionTerms": [
+            "checksum"
+          ],
+          "covered": 2,
+          "terms": [
+            {
+              "term": "task",
+              "tf": 1,
+              "df": 9055,
+              "idf": 1.7661457213528022,
+              "bm25": 1.370111372645012,
+              "bonus": 3
+            },
+            {
+              "term": "task",
+              "tf": 1,
+              "df": 9055,
+              "idf": 1.7661457213528022,
+              "bm25": 1.370111372645012,
+              "bonus": 3
+            },
+            {
+              "term": "checksum",
+              "tf": 3,
+              "df": 355,
+              "idf": 5.0037480590140975,
+              "bm25": 6.829055357696925,
+              "bonus": 3
+            }
+          ]
+        },
+        "rank": 13,
+        "file": "checkouts\\task-full-canonical\\internal\\fingerprint\\sources_checksum.go",
+        "line": 95,
+        "end": 123,
+        "name": "checksum",
+        "text": "func (c *ChecksumChecker) checksum(t *ast.Task) (string, error) {",
+        "score": 18.56927810298695
+      },
+      {
+        "explanation": {
+          "documentLength": 9,
+          "meanLength": 5.273726349182371,
+          "documents": 52958,
+          "definitionTerms": [
+            "isuptodate"
+          ],
+          "covered": 2,
+          "terms": [
+            {
+              "term": "task",
+              "tf": 1,
+              "df": 9055,
+              "idf": 1.7661457213528022,
+              "bm25": 1.370111372645012,
+              "bonus": 3
+            },
+            {
+              "term": "task",
+              "tf": 1,
+              "df": 9055,
+              "idf": 1.7661457213528022,
+              "bm25": 1.370111372645012,
+              "bonus": 3
+            },
+            {
+              "term": "checksum",
+              "tf": 1,
+              "df": 355,
+              "idf": 5.0037480590140975,
+              "bm25": 3.8817250686735036,
+              "bonus": 0
+            }
+          ]
+        },
+        "rank": 225,
+        "file": "checkouts\\task-full-canonical\\internal\\fingerprint\\sources_checksum.go",
+        "line": 31,
+        "end": 73,
+        "name": "IsUpToDate",
+        "text": "func (checker *ChecksumChecker) IsUpToDate(t *ast.Task) (bool, error) {",
+        "score": 12.621947813963528
+      }
+    ]
+  },
+  {
+    "query": "N3",
+    "text": "How does Task decide whether to execute or skip a task using checksum freshness?",
+    "profile": "split-production",
+    "results": [
+      {
+        "explanation": {
+          "documentLength": 9,
+          "meanLength": 5.023654159869494,
+          "documents": 22068,
+          "definitionTerms": [
+            "checksum"
+          ],
+          "covered": 2,
+          "terms": [
+            {
+              "term": "task",
+              "tf": 1,
+              "df": 2222,
+              "idf": 2.2955412204601005,
+              "bm25": 1.7340471770550905,
+              "bonus": 3
+            },
+            {
+              "term": "task",
+              "tf": 1,
+              "df": 2222,
+              "idf": 2.2955412204601005,
+              "bm25": 1.7340471770550905,
+              "bonus": 3
+            },
+            {
+              "term": "checksum",
+              "tf": 4,
+              "df": 130,
+              "idf": 5.1305559610854115,
+              "bm25": 7.636341455034436,
+              "bonus": 3
+            }
+          ]
+        },
+        "rank": 1,
+        "file": "checkouts\\task-full-canonical\\internal\\fingerprint\\sources_checksum.go",
+        "line": 95,
+        "end": 123,
+        "name": "checksum",
+        "text": "func (c *ChecksumChecker) checksum(t *ast.Task) (string, error) {",
+        "score": 20.10443580914462
+      },
+      {
+        "explanation": {
+          "documentLength": 6,
+          "meanLength": 5.023654159869494,
+          "documents": 22068,
+          "covered": 2,
+          "terms": [
+            {
+              "term": "task",
+              "tf": 1,
+              "df": 2222,
+              "idf": 2.2955412204601005,
+              "bm25": 2.1264723991078394,
+              "bonus": 3
+            },
+            {
+              "term": "task",
+              "tf": 1,
+              "df": 2222,
+              "idf": 2.2955412204601005,
+              "bm25": 2.1264723991078394,
+              "bonus": 3
+            },
+            {
+              "term": "using",
+              "tf": 1,
+              "df": 34,
+              "idf": 6.4609698638108455,
+              "bm25": 5.985113211823547,
+              "bonus": 3
+            }
+          ]
+        },
+        "rank": 2,
+        "file": "checkouts\\task-full-canonical\\website\\.vitepress\\config.ts",
+        "line": 233,
+        "end": 233,
+        "name": "name",
+        "text": "name: 'Organizations and projects using Task',",
+        "score": 19.238058010039225,
+        "parents": [
+          "export default defineConfig({",
+          "transformHead({ pageData }) {",
+          "if (isHome) {",
+          "head.push([",
+          "JSON.stringify({"
+        ]
+      },
+      {
+        "explanation": {
+          "documentLength": 3,
+          "meanLength": 5.023654159869494,
+          "documents": 22068,
+          "definitionTerms": [
+            "checksum"
+          ],
+          "covered": 2,
+          "terms": [
+            {
+              "term": "task",
+              "tf": 1,
+              "df": 2222,
+              "idf": 2.2955412204601005,
+              "bm25": 2.7484668441879205,
+              "bonus": 0
+            },
+            {
+              "term": "task",
+              "tf": 1,
+              "df": 2222,
+              "idf": 2.2955412204601005,
+              "bm25": 2.7484668441879205,
+              "bonus": 0
+            },
+            {
+              "term": "checksum",
+              "tf": 3,
+              "df": 130,
+              "idf": 5.1305559610854115,
+              "bm25": 8.823985778850147,
+              "bonus": 3
+            }
+          ]
+        },
+        "rank": 3,
+        "file": "checkouts\\task-full-canonical\\install-task.sh",
+        "line": 377,
+        "end": 377,
+        "name": "CHECKSUM",
+        "text": "CHECKSUM=task_checksums.txt",
+        "score": 17.320919467225988
+      },
+      {
+        "explanation": {
+          "documentLength": 3,
+          "meanLength": 5.023654159869494,
+          "documents": 22068,
+          "definitionTerms": [
+            "checksum"
+          ],
+          "covered": 2,
+          "terms": [
+            {
+              "term": "task",
+              "tf": 1,
+              "df": 2222,
+              "idf": 2.2955412204601005,
+              "bm25": 2.7484668441879205,
+              "bonus": 0
+            },
+            {
+              "term": "task",
+              "tf": 1,
+              "df": 2222,
+              "idf": 2.2955412204601005,
+              "bm25": 2.7484668441879205,
+              "bonus": 0
+            },
+            {
+              "term": "checksum",
+              "tf": 3,
+              "df": 130,
+              "idf": 5.1305559610854115,
+              "bm25": 8.823985778850147,
+              "bonus": 3
+            }
+          ]
+        },
+        "rank": 4,
+        "file": "checkouts\\task-full-canonical\\website\\src\\public\\install.sh",
+        "line": 377,
+        "end": 377,
+        "name": "CHECKSUM",
+        "text": "CHECKSUM=task_checksums.txt",
+        "score": 17.320919467225988
+      },
+      {
+        "explanation": {
+          "documentLength": 18,
+          "meanLength": 5.023654159869494,
+          "documents": 22068,
+          "definitionTerms": [
+            "checksumchecker"
+          ],
+          "covered": 2,
+          "terms": [
+            {
+              "term": "task",
+              "tf": 1,
+              "df": 2222,
+              "idf": 2.2955412204601005,
+              "bm25": 1.1161273159796854,
+              "bonus": 3
+            },
+            {
+              "term": "task",
+              "tf": 1,
+              "df": 2222,
+              "idf": 2.2955412204601005,
+              "bm25": 1.1161273159796854,
+              "bonus": 3
+            },
+            {
+              "term": "checksum",
+              "tf": 4,
+              "df": 130,
+              "idf": 5.1305559610854115,
+              "bm25": 6.0000567192088115,
+              "bonus": 3
+            }
+          ]
+        },
+        "rank": 5,
+        "file": "checkouts\\task-full-canonical\\internal\\fingerprint\\sources_checksum.go",
+        "line": 19,
+        "end": 21,
+        "name": "ChecksumChecker",
+        "text": "type ChecksumChecker struct {",
+        "score": 17.232311351168182
+      },
+      {
+        "explanation": {
+          "documentLength": 9,
+          "meanLength": 5.023654159869494,
+          "documents": 22068,
+          "definitionTerms": [
+            "isuptodate"
+          ],
+          "covered": 2,
+          "terms": [
+            {
+              "term": "task",
+              "tf": 1,
+              "df": 2222,
+              "idf": 2.2955412204601005,
+              "bm25": 1.7340471770550905,
+              "bonus": 3
+            },
+            {
+              "term": "task",
+              "tf": 1,
+              "df": 2222,
+              "idf": 2.2955412204601005,
+              "bm25": 1.7340471770550905,
+              "bonus": 3
+            },
+            {
+              "term": "checksum",
+              "tf": 1,
+              "df": 130,
+              "idf": 5.1305559610854115,
+              "bm25": 3.875611555892755,
+              "bonus": 0
+            }
+          ]
+        },
+        "rank": 59,
+        "file": "checkouts\\task-full-canonical\\internal\\fingerprint\\sources_checksum.go",
+        "line": 31,
+        "end": 73,
+        "name": "IsUpToDate",
+        "text": "func (checker *ChecksumChecker) IsUpToDate(t *ast.Task) (bool, error) {",
+        "score": 13.343705910002937
+      }
+    ]
+  },
+  {
+    "query": "N3",
+    "text": "How does Task decide whether to execute or skip a task using checksum freshness?",
+    "profile": "grouped",
+    "results": [
+      {
+        "explanation": {
+          "documentLength": 9,
+          "meanLength": 5.023654159869494,
+          "documents": 22068,
+          "definitionTerms": [
+            "checksum"
+          ],
+          "covered": 2,
+          "terms": [
+            {
+              "term": "task",
+              "tf": 1,
+              "df": 2222,
+              "idf": 2.2955412204601005,
+              "bm25": 1.7340471770550905,
+              "bonus": 3
+            },
+            {
+              "term": "task",
+              "tf": 1,
+              "df": 2222,
+              "idf": 2.2955412204601005,
+              "bm25": 1.7340471770550905,
+              "bonus": 3
+            },
+            {
+              "term": "checksum",
+              "tf": 4,
+              "df": 130,
+              "idf": 5.1305559610854115,
+              "bm25": 7.636341455034436,
+              "bonus": 3
+            }
+          ]
+        },
+        "rank": 1,
+        "file": "checkouts\\task-full-canonical\\internal\\fingerprint\\sources_checksum.go",
+        "line": 95,
+        "end": 123,
+        "name": "checksum",
+        "text": "func (c *ChecksumChecker) checksum(t *ast.Task) (string, error) {",
+        "score": 20.10443580914462,
+        "unit": {
+          "kind": "method",
+          "name": "(*ChecksumChecker).checksum",
+          "start": 95,
+          "end": 123
+        }
+      },
+      {
+        "explanation": {
+          "documentLength": 6,
+          "meanLength": 5.023654159869494,
+          "documents": 22068,
+          "covered": 2,
+          "terms": [
+            {
+              "term": "task",
+              "tf": 1,
+              "df": 2222,
+              "idf": 2.2955412204601005,
+              "bm25": 2.1264723991078394,
+              "bonus": 3
+            },
+            {
+              "term": "task",
+              "tf": 1,
+              "df": 2222,
+              "idf": 2.2955412204601005,
+              "bm25": 2.1264723991078394,
+              "bonus": 3
+            },
+            {
+              "term": "using",
+              "tf": 1,
+              "df": 34,
+              "idf": 6.4609698638108455,
+              "bm25": 5.985113211823547,
+              "bonus": 3
+            }
+          ]
+        },
+        "rank": 2,
+        "file": "checkouts\\task-full-canonical\\website\\.vitepress\\config.ts",
+        "line": 233,
+        "end": 233,
+        "name": "name",
+        "text": "name: 'Organizations and projects using Task',",
+        "score": 19.238058010039225,
+        "parents": [
+          "export default defineConfig({",
+          "transformHead({ pageData }) {",
+          "if (isHome) {",
+          "head.push([",
+          "JSON.stringify({"
+        ]
+      },
+      {
+        "explanation": {
+          "documentLength": 3,
+          "meanLength": 5.023654159869494,
+          "documents": 22068,
+          "definitionTerms": [
+            "checksum"
+          ],
+          "covered": 2,
+          "terms": [
+            {
+              "term": "task",
+              "tf": 1,
+              "df": 2222,
+              "idf": 2.2955412204601005,
+              "bm25": 2.7484668441879205,
+              "bonus": 0
+            },
+            {
+              "term": "task",
+              "tf": 1,
+              "df": 2222,
+              "idf": 2.2955412204601005,
+              "bm25": 2.7484668441879205,
+              "bonus": 0
+            },
+            {
+              "term": "checksum",
+              "tf": 3,
+              "df": 130,
+              "idf": 5.1305559610854115,
+              "bm25": 8.823985778850147,
+              "bonus": 3
+            }
+          ]
+        },
+        "rank": 3,
+        "file": "checkouts\\task-full-canonical\\install-task.sh",
+        "line": 377,
+        "end": 377,
+        "name": "CHECKSUM",
+        "text": "CHECKSUM=task_checksums.txt",
+        "score": 17.320919467225988
+      },
+      {
+        "explanation": {
+          "documentLength": 3,
+          "meanLength": 5.023654159869494,
+          "documents": 22068,
+          "definitionTerms": [
+            "checksum"
+          ],
+          "covered": 2,
+          "terms": [
+            {
+              "term": "task",
+              "tf": 1,
+              "df": 2222,
+              "idf": 2.2955412204601005,
+              "bm25": 2.7484668441879205,
+              "bonus": 0
+            },
+            {
+              "term": "task",
+              "tf": 1,
+              "df": 2222,
+              "idf": 2.2955412204601005,
+              "bm25": 2.7484668441879205,
+              "bonus": 0
+            },
+            {
+              "term": "checksum",
+              "tf": 3,
+              "df": 130,
+              "idf": 5.1305559610854115,
+              "bm25": 8.823985778850147,
+              "bonus": 3
+            }
+          ]
+        },
+        "rank": 4,
+        "file": "checkouts\\task-full-canonical\\website\\src\\public\\install.sh",
+        "line": 377,
+        "end": 377,
+        "name": "CHECKSUM",
+        "text": "CHECKSUM=task_checksums.txt",
+        "score": 17.320919467225988
+      },
+      {
+        "explanation": {
+          "documentLength": 18,
+          "meanLength": 5.023654159869494,
+          "documents": 22068,
+          "definitionTerms": [
+            "checksumchecker"
+          ],
+          "covered": 2,
+          "terms": [
+            {
+              "term": "task",
+              "tf": 1,
+              "df": 2222,
+              "idf": 2.2955412204601005,
+              "bm25": 1.1161273159796854,
+              "bonus": 3
+            },
+            {
+              "term": "task",
+              "tf": 1,
+              "df": 2222,
+              "idf": 2.2955412204601005,
+              "bm25": 1.1161273159796854,
+              "bonus": 3
+            },
+            {
+              "term": "checksum",
+              "tf": 4,
+              "df": 130,
+              "idf": 5.1305559610854115,
+              "bm25": 6.0000567192088115,
+              "bonus": 3
+            }
+          ]
+        },
+        "rank": 5,
+        "file": "checkouts\\task-full-canonical\\internal\\fingerprint\\sources_checksum.go",
+        "line": 19,
+        "end": 21,
+        "name": "ChecksumChecker",
+        "text": "type ChecksumChecker struct {",
+        "score": 17.232311351168182,
+        "unit": {
+          "kind": "type",
+          "name": "ChecksumChecker",
+          "start": 19,
+          "end": 21
+        }
+      },
+      {
+        "explanation": {
+          "documentLength": 9,
+          "meanLength": 5.023654159869494,
+          "documents": 22068,
+          "definitionTerms": [
+            "isuptodate"
+          ],
+          "covered": 2,
+          "terms": [
+            {
+              "term": "task",
+              "tf": 1,
+              "df": 2222,
+              "idf": 2.2955412204601005,
+              "bm25": 1.7340471770550905,
+              "bonus": 3
+            },
+            {
+              "term": "task",
+              "tf": 1,
+              "df": 2222,
+              "idf": 2.2955412204601005,
+              "bm25": 1.7340471770550905,
+              "bonus": 3
+            },
+            {
+              "term": "checksum",
+              "tf": 1,
+              "df": 130,
+              "idf": 5.1305559610854115,
+              "bm25": 3.875611555892755,
+              "bonus": 0
+            }
+          ]
+        },
+        "rank": 48,
+        "file": "checkouts\\task-full-canonical\\internal\\fingerprint\\sources_checksum.go",
+        "line": 31,
+        "end": 73,
+        "name": "IsUpToDate",
+        "text": "func (checker *ChecksumChecker) IsUpToDate(t *ast.Task) (bool, error) {",
+        "score": 13.343705910002937,
+        "unit": {
+          "kind": "method",
+          "name": "(*ChecksumChecker).IsUpToDate",
+          "start": 31,
+          "end": 73
+        }
+      }
+    ]
+  },
+  {
+    "query": "S4",
+    "text": "ChecksumChecker IsUpToDate os.IsNotExist WriteFile checksum dry",
+    "profile": "legacy",
+    "results": [
+      {
+        "explanation": {
+          "documentLength": 9,
+          "meanLength": 5.273726349182371,
+          "documents": 52958,
+          "definitionTerms": [
+            "isuptodate"
+          ],
+          "covered": 3,
+          "terms": [
+            {
+              "term": "checksumchecker",
+              "tf": 1,
+              "df": 9,
+              "idf": 8.625981509650897,
+              "bm25": 6.691721540137531,
+              "bonus": 3
+            },
+            {
+              "term": "isuptodate",
+              "tf": 3,
+              "df": 38,
+              "idf": 7.226615066963654,
+              "bm25": 9.86279759872347,
+              "bonus": 3
+            },
+            {
+              "term": "checksum",
+              "tf": 1,
+              "df": 355,
+              "idf": 5.0037480590140975,
+              "bm25": 3.8817250686735036,
+              "bonus": 0
+            }
+          ]
+        },
+        "rank": 1,
+        "file": "checkouts\\task-full-canonical\\internal\\fingerprint\\sources_checksum.go",
+        "line": 31,
+        "end": 73,
+        "name": "IsUpToDate",
+        "text": "func (checker *ChecksumChecker) IsUpToDate(t *ast.Task) (bool, error) {",
+        "score": 26.436244207534507
+      },
+      {
+        "explanation": {
+          "documentLength": 7,
+          "meanLength": 5.273726349182371,
+          "documents": 52958,
+          "definitionTerms": [
+            "newchecksumchecker"
+          ],
+          "covered": 3,
+          "terms": [
+            {
+              "term": "checksumchecker",
+              "tf": 1,
+              "df": 9,
+              "idf": 8.625981509650897,
+              "bm25": 7.607291726265488,
+              "bonus": 3
+            },
+            {
+              "term": "checksum",
+              "tf": 1,
+              "df": 355,
+              "idf": 5.0037480590140975,
+              "bm25": 4.412827823369107,
+              "bonus": 0
+            },
+            {
+              "term": "dry",
+              "tf": 1,
+              "df": 63,
+              "idf": 6.726233402358747,
+              "bm25": 5.931895362104144,
+              "bonus": 3
+            }
+          ]
+        },
+        "rank": 2,
+        "file": "checkouts\\task-full-canonical\\internal\\fingerprint\\sources_checksum.go",
+        "line": 24,
+        "end": 27,
+        "name": "NewChecksumChecker",
+        "text": "func NewChecksumChecker(tempDir string, dry bool) *ChecksumChecker {",
+        "score": 23.952014911738736
+      },
+      {
+        "explanation": {
+          "documentLength": 18,
+          "meanLength": 5.273726349182371,
+          "documents": 52958,
+          "definitionTerms": [
+            "checksumchecker"
+          ],
+          "covered": 2,
+          "terms": [
+            {
+              "term": "checksumchecker",
+              "tf": 4,
+              "df": 9,
+              "idf": 8.625981509650897,
+              "bm25": 10.297120164669828,
+              "bonus": 3
+            },
+            {
+              "term": "checksum",
+              "tf": 4,
+              "df": 355,
+              "idf": 5.0037480590140975,
+              "bm25": 5.973139981781252,
+              "bonus": 3
+            }
+          ]
+        },
+        "rank": 3,
+        "file": "checkouts\\task-full-canonical\\internal\\fingerprint\\sources_checksum.go",
+        "line": 19,
+        "end": 21,
+        "name": "ChecksumChecker",
+        "text": "type ChecksumChecker struct {",
+        "score": 22.27026014645108
+      },
+      {
+        "explanation": {
+          "documentLength": 2,
+          "meanLength": 5.273726349182371,
+          "documents": 52958,
+          "covered": 2,
+          "terms": [
+            {
+              "term": "checksumchecker",
+              "tf": 1,
+              "df": 9,
+              "idf": 8.625981509650897,
+              "bm25": 11.562170275821646,
+              "bonus": 3
+            },
+            {
+              "term": "checksum",
+              "tf": 1,
+              "df": 355,
+              "idf": 5.0037480590140975,
+              "bm25": 6.706968593765797,
+              "bonus": 0
+            }
+          ]
+        },
+        "rank": 4,
+        "file": "checkouts\\task-full-canonical\\internal\\fingerprint\\sources_checksum.go",
+        "line": 25,
+        "end": 27,
+        "name": "ChecksumChecker",
+        "text": "return &ChecksumChecker{",
+        "score": 21.269138869587444,
+        "parents": [
+          "func NewChecksumChecker(tempDir string, dry bool) *ChecksumChecker {"
+        ]
+      },
+      {
+        "explanation": {
+          "documentLength": 9,
+          "meanLength": 5.273726349182371,
+          "documents": 52958,
+          "definitionTerms": [
+            "checksum"
+          ],
+          "covered": 2,
+          "terms": [
+            {
+              "term": "checksumchecker",
+              "tf": 1,
+              "df": 9,
+              "idf": 8.625981509650897,
+              "bm25": 6.691721540137531,
+              "bonus": 3
+            },
+            {
+              "term": "checksum",
+              "tf": 3,
+              "df": 355,
+              "idf": 5.0037480590140975,
+              "bm25": 6.829055357696925,
+              "bonus": 3
+            }
+          ]
+        },
+        "rank": 5,
+        "file": "checkouts\\task-full-canonical\\internal\\fingerprint\\sources_checksum.go",
+        "line": 95,
+        "end": 123,
+        "name": "checksum",
+        "text": "func (c *ChecksumChecker) checksum(t *ast.Task) (string, error) {",
+        "score": 19.52077689783446
+      }
+    ]
+  },
+  {
+    "query": "S4",
+    "text": "ChecksumChecker IsUpToDate os.IsNotExist WriteFile checksum dry",
+    "profile": "split-production",
+    "results": [
+      {
+        "explanation": {
+          "documentLength": 9,
+          "meanLength": 5.023654159869494,
+          "documents": 22068,
+          "definitionTerms": [
+            "isuptodate"
+          ],
+          "covered": 3,
+          "terms": [
+            {
+              "term": "checksumchecker",
+              "tf": 1,
+              "df": 9,
+              "idf": 7.750637389241665,
+              "bm25": 5.854815746893162,
+              "bonus": 3
+            },
+            {
+              "term": "isuptodate",
+              "tf": 3,
+              "df": 10,
+              "idf": 7.650553930684683,
+              "bm25": 10.278874344328893,
+              "bonus": 3
+            },
+            {
+              "term": "checksum",
+              "tf": 1,
+              "df": 130,
+              "idf": 5.1305559610854115,
+              "bm25": 3.875611555892755,
+              "bonus": 0
+            }
+          ]
+        },
+        "rank": 1,
+        "file": "checkouts\\task-full-canonical\\internal\\fingerprint\\sources_checksum.go",
+        "line": 31,
+        "end": 73,
+        "name": "IsUpToDate",
+        "text": "func (checker *ChecksumChecker) IsUpToDate(t *ast.Task) (bool, error) {",
+        "score": 26.00930164711481
+      },
+      {
+        "explanation": {
+          "documentLength": 7,
+          "meanLength": 5.023654159869494,
+          "documents": 22068,
+          "definitionTerms": [
+            "newchecksumchecker"
+          ],
+          "covered": 3,
+          "terms": [
+            {
+              "term": "checksumchecker",
+              "tf": 1,
+              "df": 9,
+              "idf": 7.750637389241665,
+              "bm25": 6.6761759954703725,
+              "bonus": 3
+            },
+            {
+              "term": "checksum",
+              "tf": 2,
+              "df": 130,
+              "idf": 5.1305559610854115,
+              "bm25": 6.3517217991745,
+              "bonus": 0
+            },
+            {
+              "term": "dry",
+              "tf": 1,
+              "df": 33,
+              "idf": 6.490383749017139,
+              "bm25": 5.590629777974789,
+              "bonus": 3
+            }
+          ]
+        },
+        "rank": 2,
+        "file": "checkouts\\task-full-canonical\\internal\\fingerprint\\sources_checksum.go",
+        "line": 24,
+        "end": 27,
+        "name": "NewChecksumChecker",
+        "text": "func NewChecksumChecker(tempDir string, dry bool) *ChecksumChecker {",
+        "score": 24.618527572619662
+      },
+      {
+        "explanation": {
+          "documentLength": 18,
+          "meanLength": 5.023654159869494,
+          "documents": 22068,
+          "definitionTerms": [
+            "checksumchecker"
+          ],
+          "covered": 2,
+          "terms": [
+            {
+              "term": "checksumchecker",
+              "tf": 4,
+              "df": 9,
+              "idf": 7.750637389241665,
+              "bm25": 9.064176338431777,
+              "bonus": 3
+            },
+            {
+              "term": "checksum",
+              "tf": 4,
+              "df": 130,
+              "idf": 5.1305559610854115,
+              "bm25": 6.0000567192088115,
+              "bonus": 3
+            }
+          ]
+        },
+        "rank": 3,
+        "file": "checkouts\\task-full-canonical\\internal\\fingerprint\\sources_checksum.go",
+        "line": 19,
+        "end": 21,
+        "name": "ChecksumChecker",
+        "text": "type ChecksumChecker struct {",
+        "score": 21.06423305764059
+      },
+      {
+        "explanation": {
+          "documentLength": 2,
+          "meanLength": 5.023654159869494,
+          "documents": 22068,
+          "covered": 2,
+          "terms": [
+            {
+              "term": "checksumchecker",
+              "tf": 1,
+              "df": 9,
+              "idf": 7.750637389241665,
+              "bm25": 10.282428794903483,
+              "bonus": 3
+            },
+            {
+              "term": "checksum",
+              "tf": 1,
+              "df": 130,
+              "idf": 5.1305559610854115,
+              "bm25": 6.80648231864837,
+              "bonus": 0
+            }
+          ]
+        },
+        "rank": 4,
+        "file": "checkouts\\task-full-canonical\\internal\\fingerprint\\sources_checksum.go",
+        "line": 25,
+        "end": 27,
+        "name": "ChecksumChecker",
+        "text": "return &ChecksumChecker{",
+        "score": 20.088911113551852,
+        "parents": [
+          "func NewChecksumChecker(tempDir string, dry bool) *ChecksumChecker {"
+        ]
+      },
+      {
+        "explanation": {
+          "documentLength": 9,
+          "meanLength": 5.023654159869494,
+          "documents": 22068,
+          "definitionTerms": [
+            "checksum"
+          ],
+          "covered": 2,
+          "terms": [
+            {
+              "term": "checksumchecker",
+              "tf": 1,
+              "df": 9,
+              "idf": 7.750637389241665,
+              "bm25": 5.854815746893162,
+              "bonus": 3
+            },
+            {
+              "term": "checksum",
+              "tf": 4,
+              "df": 130,
+              "idf": 5.1305559610854115,
+              "bm25": 7.636341455034436,
+              "bonus": 3
+            }
+          ]
+        },
+        "rank": 5,
+        "file": "checkouts\\task-full-canonical\\internal\\fingerprint\\sources_checksum.go",
+        "line": 95,
+        "end": 123,
+        "name": "checksum",
+        "text": "func (c *ChecksumChecker) checksum(t *ast.Task) (string, error) {",
+        "score": 19.4911572019276
+      }
+    ]
+  },
+  {
+    "query": "S4",
+    "text": "ChecksumChecker IsUpToDate os.IsNotExist WriteFile checksum dry",
+    "profile": "grouped",
+    "results": [
+      {
+        "explanation": {
+          "documentLength": 9,
+          "meanLength": 5.023654159869494,
+          "documents": 22068,
+          "definitionTerms": [
+            "isuptodate"
+          ],
+          "covered": 3,
+          "terms": [
+            {
+              "term": "checksumchecker",
+              "tf": 1,
+              "df": 9,
+              "idf": 7.750637389241665,
+              "bm25": 5.854815746893162,
+              "bonus": 3
+            },
+            {
+              "term": "isuptodate",
+              "tf": 3,
+              "df": 10,
+              "idf": 7.650553930684683,
+              "bm25": 10.278874344328893,
+              "bonus": 3
+            },
+            {
+              "term": "checksum",
+              "tf": 1,
+              "df": 130,
+              "idf": 5.1305559610854115,
+              "bm25": 3.875611555892755,
+              "bonus": 0
+            }
+          ]
+        },
+        "rank": 1,
+        "file": "checkouts\\task-full-canonical\\internal\\fingerprint\\sources_checksum.go",
+        "line": 31,
+        "end": 73,
+        "name": "IsUpToDate",
+        "text": "func (checker *ChecksumChecker) IsUpToDate(t *ast.Task) (bool, error) {",
+        "score": 26.00930164711481,
+        "unit": {
+          "kind": "method",
+          "name": "(*ChecksumChecker).IsUpToDate",
+          "start": 31,
+          "end": 73
+        }
+      },
+      {
+        "explanation": {
+          "documentLength": 7,
+          "meanLength": 5.023654159869494,
+          "documents": 22068,
+          "definitionTerms": [
+            "newchecksumchecker"
+          ],
+          "covered": 3,
+          "terms": [
+            {
+              "term": "checksumchecker",
+              "tf": 1,
+              "df": 9,
+              "idf": 7.750637389241665,
+              "bm25": 6.6761759954703725,
+              "bonus": 3
+            },
+            {
+              "term": "checksum",
+              "tf": 2,
+              "df": 130,
+              "idf": 5.1305559610854115,
+              "bm25": 6.3517217991745,
+              "bonus": 0
+            },
+            {
+              "term": "dry",
+              "tf": 1,
+              "df": 33,
+              "idf": 6.490383749017139,
+              "bm25": 5.590629777974789,
+              "bonus": 3
+            }
+          ]
+        },
+        "rank": 2,
+        "file": "checkouts\\task-full-canonical\\internal\\fingerprint\\sources_checksum.go",
+        "line": 24,
+        "end": 27,
+        "name": "NewChecksumChecker",
+        "text": "func NewChecksumChecker(tempDir string, dry bool) *ChecksumChecker {",
+        "score": 24.618527572619662,
+        "unit": {
+          "kind": "function",
+          "name": "NewChecksumChecker",
+          "start": 24,
+          "end": 27
+        }
+      },
+      {
+        "explanation": {
+          "documentLength": 18,
+          "meanLength": 5.023654159869494,
+          "documents": 22068,
+          "definitionTerms": [
+            "checksumchecker"
+          ],
+          "covered": 2,
+          "terms": [
+            {
+              "term": "checksumchecker",
+              "tf": 4,
+              "df": 9,
+              "idf": 7.750637389241665,
+              "bm25": 9.064176338431777,
+              "bonus": 3
+            },
+            {
+              "term": "checksum",
+              "tf": 4,
+              "df": 130,
+              "idf": 5.1305559610854115,
+              "bm25": 6.0000567192088115,
+              "bonus": 3
+            }
+          ]
+        },
+        "rank": 3,
+        "file": "checkouts\\task-full-canonical\\internal\\fingerprint\\sources_checksum.go",
+        "line": 19,
+        "end": 21,
+        "name": "ChecksumChecker",
+        "text": "type ChecksumChecker struct {",
+        "score": 21.06423305764059,
+        "unit": {
+          "kind": "type",
+          "name": "ChecksumChecker",
+          "start": 19,
+          "end": 21
+        }
+      },
+      {
+        "explanation": {
+          "documentLength": 9,
+          "meanLength": 5.023654159869494,
+          "documents": 22068,
+          "definitionTerms": [
+            "checksum"
+          ],
+          "covered": 2,
+          "terms": [
+            {
+              "term": "checksumchecker",
+              "tf": 1,
+              "df": 9,
+              "idf": 7.750637389241665,
+              "bm25": 5.854815746893162,
+              "bonus": 3
+            },
+            {
+              "term": "checksum",
+              "tf": 4,
+              "df": 130,
+              "idf": 5.1305559610854115,
+              "bm25": 7.636341455034436,
+              "bonus": 3
+            }
+          ]
+        },
+        "rank": 4,
+        "file": "checkouts\\task-full-canonical\\internal\\fingerprint\\sources_checksum.go",
+        "line": 95,
+        "end": 123,
+        "name": "checksum",
+        "text": "func (c *ChecksumChecker) checksum(t *ast.Task) (string, error) {",
+        "score": 19.4911572019276,
+        "unit": {
+          "kind": "method",
+          "name": "(*ChecksumChecker).checksum",
+          "start": 95,
+          "end": 123
+        }
+      },
+      {
+        "explanation": {
+          "documentLength": 8,
+          "meanLength": 5.023654159869494,
+          "documents": 22068,
+          "covered": 2,
+          "terms": [
+            {
+              "term": "writefile",
+              "tf": 1,
+              "df": 14,
+              "idf": 7.3277805384216315,
+              "bm25": 5.898214955506772,
+              "bonus": 3
+            },
+            {
+              "term": "checksum",
+              "tf": 2,
+              "df": 130,
+              "idf": 5.1305559610854115,
+              "bm25": 6.046910756060794,
+              "bonus": 3
+            }
+          ]
+        },
+        "rank": 5,
+        "file": "checkouts\\task-full-canonical\\taskfile\\node_cache.go",
+        "line": 66,
+        "end": 66,
+        "name": "os.WriteFile",
+        "text": "return os.WriteFile(node.checksumPath(), []byte(checksum), 0o644)",
+        "score": 17.945125711567567,
+        "unit": {
+          "kind": "method",
+          "name": "(*CacheNode).WriteChecksum",
+          "start": 62,
+          "end": 66
+        }
+      }
+    ]
+  }
+]

@@ -1,0 +1,60 @@
+{
+  "anchors": {
+    "saved-condition": [
+      [
+        "Lib/PowerPath/PP.Execution.psm1",
+        747,
+        754
+      ],
+      [
+        "Lib/PowerPath/PP.Execution.psm1",
+        760,
+        775
+      ]
+    ],
+    "ambiguous-selection": [
+      [
+        "Lib/PowerPath/PP.Execution.psm1",
+        624,
+        632
+      ]
+    ]
+  },
+  "queries": {
+    "PN1": {
+      "kind": "natural",
+      "query": "When does a stored command get skipped because its saved condition evaluates false?",
+      "anchors": [
+        "saved-condition"
+      ]
+    },
+    "PN2": {
+      "kind": "natural",
+      "query": "How does the prompt choose between a command list and a named command when both exist?",
+      "anchors": [
+        "ambiguous-selection"
+      ]
+    },
+    "PS1": {
+      "kind": "informed",
+      "query": "default CSV condition evaluate script block and return bool",
+      "anchors": [
+        "saved-condition"
+      ]
+    },
+    "PD1": {
+      "kind": "exact-identifier",
+      "query": "Test-CommandConditionFromDefaultCsv InvokeReturnAsIs",
+      "anchors": [
+        "saved-condition"
+      ]
+    },
+    "PD2": {
+      "kind": "exact-identifier",
+      "query": "Resolve-AmbiguousRunInput Read-Host",
+      "anchors": [
+        "ambiguous-selection"
+      ]
+    }
+  }
+}
