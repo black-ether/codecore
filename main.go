@@ -33,6 +33,7 @@ Flags:
   --per-file           with --ask, return the best match per file only
   --word               with --ask, match whole words only (no prefix
                        matching, so "read" does not match "reader")
+  --dedup-docs         with --ask, suppress identical Markdown passages across files
   --group-structure   with --ask, return the best match per structural unit
   --categories LIST   with --ask, include production,docs,tests,fixtures,generated
   --no-tests           exclude test files (test_*.py, *_test.go,
@@ -106,6 +107,7 @@ func run(args []string) int {
 	perFileFlag := fs.Bool("per-file", false, "best match per file for --ask")
 	splitIdentifiersFlag := fs.Bool("split-identifiers", false, "index compound identifier parts for --ask")
 	wordFlag := fs.Bool("word", false, "whole-word only for --ask (no prefix matching)")
+	dedupDocsFlag := fs.Bool("dedup-docs", false, "suppress duplicate Markdown passages for --ask")
 	groupStructureFlag := fs.Bool("group-structure", false, "group matches by enclosing structural unit for --ask")
 	categoriesFlag := fs.String("categories", "", "comma-separated source categories for --ask")
 	noTestsFlag := fs.Bool("no-tests", false, "exclude test files")
@@ -166,6 +168,13 @@ func run(args []string) int {
 	if opts.groupStructure && (*askFlag == "" || *countFlag) {
 		fmt.Fprintln(os.Stderr, "codecore: --group-structure needs --ask and cannot be used with --count")
 		return 2
+	}
+	if *dedupDocsFlag {
+		if *askFlag == "" || *countFlag {
+			fmt.Fprintln(os.Stderr, "codecore: --dedup-docs needs --ask and cannot be used with --count")
+			return 2
+		}
+		opts.docPassages = make(map[string]map[int]passageLine)
 	}
 	var terms []string
 	if *askFlag != "" {
@@ -277,6 +286,9 @@ func run(args []string) int {
 		attachComments(o, src)
 		if o.Unbalanced {
 			fmt.Fprintf(os.Stderr, "codecore: %s: unbalanced brackets; outline may be incomplete\n", f)
+		}
+		if opts.docPassages != nil && isMarkdownFile(f) {
+			opts.docPassages[f] = markdownPassages(src)
 		}
 		outlines = append(outlines, o)
 	}

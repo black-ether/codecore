@@ -140,6 +140,7 @@ func containsWord(text, term string) bool {
 type retrievalOptions struct {
 	splitIdentifiers bool
 	groupStructure   bool
+	docPassages      map[string]map[int]passageLine
 }
 
 type retrievalDocument struct {
@@ -520,6 +521,9 @@ func (opts retrievalOptions) allMatches(outlines []*Outline, terms []string, def
 // --top cut, then ranks.
 func (opts retrievalOptions) retrieve(outlines []*Outline, terms []string, top int, defOnly bool, perFile bool, wordOnly bool) []retrievalResult {
 	results := opts.allMatches(outlines, terms, defOnly, wordOnly)
+	if opts.docPassages != nil {
+		results = suppressDuplicateDocs(results, opts.docPassages)
+	}
 	if opts.groupStructure {
 		results = groupStructuralMatches(results)
 	}
