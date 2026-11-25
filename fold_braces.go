@@ -33,7 +33,7 @@ func parseBraces(lines []string, lang string) ([]*Node, bool) {
 			continue
 		}
 		var node *Node
-		var rest []byte
+		var rest []braceEvent
 		// poppedHeader is the node of the most recent frame a closer
 		// popped on this line. A header-continuation line (") {")
 		// belongs to that node, not to the previous code line.
@@ -45,17 +45,15 @@ func parseBraces(lines []string, lang string) ([]*Node, bool) {
 			// continuation below belongs to that line.
 			firstOpen := len(events)
 			for k, ev := range events {
-				if isOpener(ev) {
+				if ev.opens() {
 					firstOpen = k
 					break
 				}
 			}
 			var header *Node
 			for _, ev := range events[:firstOpen] {
-				if isCloser(ev) {
-					if owner := closeBraceFrame(&stack, ev, lineno+1, &unbalanced); owner != nil {
-						header = owner
-					}
+				if owner := closeBraceFrame(&stack, ev, lineno+1, &unbalanced); owner != nil {
+					header = owner
 				}
 			}
 			rest = events[firstOpen:]
@@ -75,7 +73,7 @@ func parseBraces(lines []string, lang string) ([]*Node, bool) {
 			rest = events
 		}
 		for _, ev := range rest {
-			if isOpener(ev) {
+			if ev.opens() {
 				// An opener pushes the line's node when that node is
 				// not already on the stack (a '{' after a balanced
 				// '[]' re-pushes it). On a line with no code of its
@@ -96,7 +94,7 @@ func parseBraces(lines []string, lang string) ([]*Node, bool) {
 				} else {
 					stack = append(stack, braceFrame{opener: ev, kids: stack[len(stack)-1].kids})
 				}
-			} else if isCloser(ev) {
+			} else {
 				if owner := closeBraceFrame(&stack, ev, lineno+1, &unbalanced); owner != nil {
 					poppedHeader = owner
 				}
@@ -137,15 +135,15 @@ func isHeaderContinuation(stripped string) bool {
 // node when this frame is that node's block (nil for a transparent
 // grouping frame), and the list lines inside it attach to.
 type braceFrame struct {
-	opener byte
+	opener braceEvent
 	node   *Node
 	kids   *[]*Node
 }
 
-func closeBraceFrame(stack *[]braceFrame, closer byte, line int, unbalanced *bool) *Node {
+func closeBraceFrame(stack *[]braceFrame, closer braceEvent, line int, unbalanced *bool) *Node {
 	i := len(*stack) - 1
 	frame := (*stack)[i]
-	if i == 0 || frame.opener != matchCloser(closer) {
+	if i == 0 || frame.opener != closer.matchingOpener() {
 		*unbalanced = true
 		return nil
 	}
@@ -165,28 +163,42 @@ func nodeOnStack(stack []braceFrame, node *Node) bool {
 	return false
 }
 
-func isOpener(c byte) bool { return c == '(' || c == '[' || c == '{' }
-func isCloser(c byte) bool { return c == ')' || c == ']' || c == '}' }
+// Brace events include synthetic template delimiters so a multiline
+// template folds as a single literal, with its closing backtick in range.
+type braceEvent uint16
 
-func matchCloser(c byte) byte {
-	switch c {
+const (
+	templateOpen braceEvent = 256 + iota
+	templateClose
+)
+
+func (event braceEvent) opens() bool {
+	return event == '(' || event == '[' || event == '{' || event == templateOpen
+}
+
+func (event braceEvent) matchingOpener() braceEvent {
+	switch event {
 	case ')':
 		return '('
 	case ']':
 		return '['
 	case '}':
 		return '{'
+	case templateClose:
+		return templateOpen
 	}
 	return 0
 }
 
-// braceState carries block-comment / raw-string / here-string state
-// across lines. hereString is 0, or the quote that opened the
-// here-string ('"' or '\”).
+// braceState carries lexical state across source lines.
 type braceState struct {
 	blockComment bool
 	raw          bool
 	hereString   byte
+	// One entry per nested JS/TS template. Zero is template text.
+	// A positive depth counts braces inside the current interpolation,
+	// including its outer ${...} braces.
+	templates []int
 }
 
 // scanBraces scans one line for brackets outside strings and comments.
@@ -195,10 +207,11 @@ type braceState struct {
 // besides brackets and punctuation. A line that is only a string
 // literal counts as code (the string is a token); a line that is only
 // a closer, a comma, or a comment does not.
-func scanBraces(line, lang string, st *braceState) ([]byte, bool) {
-	var events []byte
+func scanBraces(line, lang string, st *braceState) ([]braceEvent, bool) {
+	var events []braceEvent
 	var codeChars []byte
 	n := len(line)
+	javascript := lang == "javascript" || lang == "typescript"
 	if st.hereString != 0 {
 		// A here-string ends when a line starts with its terminator.
 		term := string(st.hereString) + "@"
@@ -231,6 +244,24 @@ func scanBraces(line, lang string, st *braceState) ([]byte, bool) {
 				st.raw = false
 			}
 			i++
+			continue
+		}
+		template := len(st.templates) - 1
+		if template >= 0 && st.templates[template] == 0 {
+			switch {
+			case c == '\\':
+				// An escape consumes the next byte or the line ending.
+				i += 2
+			case c == '`':
+				st.templates = st.templates[:template]
+				events = append(events, templateClose)
+				i++
+			case c == '$' && i+1 < n && line[i+1] == '{':
+				st.templates[template] = 1
+				i += 2
+			default:
+				i++
+			}
 			continue
 		}
 		if i+1 < n {
@@ -305,9 +336,31 @@ func scanBraces(line, lang string, st *braceState) ([]byte, bool) {
 			i++
 			continue
 		}
-		if isOpener(c) || isCloser(c) {
-			events = append(events, c)
-		} else {
+		if javascript && c == '`' {
+			st.templates = append(st.templates, 0)
+			events = append(events, templateOpen)
+			codeChars = append(codeChars, 'x')
+			i++
+			continue
+		}
+		// Interpolation delimiters belong to the template lexer. Emit
+		// braces within the expression to the folder as ordinary code.
+		if template >= 0 {
+			switch c {
+			case '{':
+				st.templates[template]++
+			case '}':
+				st.templates[template]--
+				if st.templates[template] == 0 {
+					i++
+					continue
+				}
+			}
+		}
+		switch c {
+		case '(', ')', '[', ']', '{', '}':
+			events = append(events, braceEvent(c))
+		default:
 			codeChars = append(codeChars, c)
 		}
 		i++
