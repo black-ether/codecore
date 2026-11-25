@@ -69,7 +69,7 @@ func TestJSONFormatterDepth(t *testing.T) {
 // JSON honours the language default too: Depth -1 on an HTML
 // outline shows two levels (html > head > meta), not just the top.
 func TestJSONFormatterDefaultDepth(t *testing.T) {
-	o := mustExtract(t, "testdb/html/boilerplate-index.html")
+	o := mustExtract(t, "testdata/depth.html")
 	var buf bytes.Buffer
 	if err := (JSONFormatter{Depth: -1}).Format(&buf, []*Outline{o}); err != nil {
 		t.Fatal(err)

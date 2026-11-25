@@ -162,7 +162,7 @@ func TestTextFormatterDepth2(t *testing.T) {
 // default to 2 (their top level is a single wrapper tag, so 0
 // shows almost nothing), everything else defaults to 0.
 func TestDefaultDepth(t *testing.T) {
-	html := mustExtract(t, "testdb/html/boilerplate-index.html")
+	html := mustExtract(t, "testdata/depth.html")
 	if html.DefaultDepth != 2 {
 		t.Errorf("html DefaultDepth = %d, want 2", html.DefaultDepth)
 	}
@@ -181,7 +181,7 @@ func TestDefaultDepth(t *testing.T) {
 	// The HTML default actually shows two levels: <head> and <body>
 	// nest under <html>, and their children show too.
 	joined := strings.Join(formatOutline(t, -1, html), "\n")
-	for _, want := range []string{"<head>", "<body>", `<meta charset="utf-8">`, "<p>Hello world! This is HTML5 Boilerplate.</p>"} {
+	for _, want := range []string{"<head>", "<body>", `<meta charset="utf-8">`, "<p>Sample body.</p>"} {
 		if !strings.Contains(joined, want) {
 			t.Errorf("html default depth missing %q", want)
 		}
