@@ -10,8 +10,6 @@ type rankingTerm struct {
 }
 
 type rankingExplanation struct {
-	Adjustment      float64       `json:"adjustment,omitempty"`
-	SupportingTerms []string      `json:"supportingTerms,omitempty"`
 	DocumentLength  int           `json:"documentLength"`
 	MeanLength      float64       `json:"meanLength"`
 	Documents       int           `json:"documents"`
